@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { ResumePreview } from "@/components/ResumePreview";
 import { BrainCircuit, MessageSquare, ShieldCheck, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -70,13 +71,13 @@ export default function InterviewPage() {
                   <MessageSquare className="w-5 h-5 text-primary" />
                   Extracted Summary
                 </h3>
-                <div className="bg-white/[0.03] rounded-2xl p-6 border border-white/5 min-h-[100px]">
+                <div className="bg-transparent rounded-2xl">
                   {resumeText ? (
-                    <p className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap">
-                      {resumeText.length > 500 ? resumeText.substring(0, 500) + "..." : resumeText}
-                    </p>
+                    <ResumePreview resumeText={resumeText} />
                   ) : (
-                    <p className="text-white/30 italic text-sm">No resume text found. Have you uploaded your resume yet?</p>
+                    <div className="bg-white/[0.03] rounded-2xl p-6 border border-white/5 min-h-[100px]">
+                      <p className="text-white/30 italic text-sm">No resume text found. Have you uploaded your resume yet?</p>
+                    </div>
                   )}
                 </div>
               </div>
