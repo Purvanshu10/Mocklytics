@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ArrowRight, FileText, Sparkles, BrainCircuit } from "lucide-react";
@@ -34,12 +35,16 @@ export function Hero() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center gap-4 mt-4 justify-center lg:justify-start">
-            <Button size="lg" className="h-14 px-8 text-base bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(0,194,255,0.4)] transition-all">
-              Start Interview <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-            <Button size="lg" variant="outline" className="h-14 px-8 text-base border-primary/40 hover:bg-primary/5 bg-white/5 glass">
-              <FileText className="mr-2 w-5 h-5" /> Upload Resume
-            </Button>
+            <Link href="/upload">
+              <Button size="lg" className="h-14 px-8 text-base bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(0,194,255,0.4)] transition-all">
+                Start Interview <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+            <Link href="/upload">
+              <Button size="lg" variant="outline" className="h-14 px-8 text-base border-primary/40 hover:bg-primary/5 bg-white/5 glass">
+                <FileText className="mr-2 w-5 h-5" /> Upload Resume
+              </Button>
+            </Link>
           </div>
         </motion.div>
 

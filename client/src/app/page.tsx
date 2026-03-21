@@ -6,12 +6,14 @@ import { HowItWorks } from "@/components/sections/HowItWorks";
 import { DashboardPreview } from "@/components/sections/DashboardPreview";
 import { CTA } from "@/components/sections/CTA";
 
+import TestApiConnector from "@/components/TestApiConnector";
+
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col relative">
       {/* Global Background Grid Pattern */}
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none -z-20" />
-      
+      <TestApiConnector />
       <Navbar />
       <main className="flex-1">
         <Hero />

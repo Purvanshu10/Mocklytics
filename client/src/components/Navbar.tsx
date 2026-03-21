@@ -23,9 +23,11 @@ export function Navbar() {
           <Link href="/login" className="hidden sm:block text-sm font-medium text-white/70 hover:text-white transition-colors">
             Log In
           </Link>
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_15px_rgba(0,194,255,0.5)]">
-            Start Interview
-          </Button>
+          <Link href="/upload">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_15px_rgba(0,194,255,0.5)]">
+              Start Interview
+            </Button>
+          </Link>
         </div>
       </div>
     </nav>
