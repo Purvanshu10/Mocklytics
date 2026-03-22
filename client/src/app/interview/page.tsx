@@ -74,6 +74,40 @@ export default function InterviewPage() {
     fetchQuestions();
   }, [router]);
 
+  const handleComplete = async (allAnswers: Answer[]) => {
+    setIsSubmitting(true);
+    try {
+      const evaluations = await Promise.all(
+        allAnswers.map(async (item) => {
+          const response = await fetch("http://localhost:5000/api/evaluate-answer", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              question: item.question,
+              answer: item.answer,
+              resumeText: resumeText,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to evaluate answer");
+          }
+
+          return response.json();
+        })
+      );
+
+      sessionStorage.setItem("evaluations", JSON.stringify(evaluations));
+      router.push("/report");
+    } catch (err) {
+      console.error("Error generating report:", err);
+      setError("Unable to generate your report. Please try again.");
+      setIsSubmitting(false);
+    }
+  };
+
   const handleNext = () => {
     if (!currentAnswer.trim()) return;
 
@@ -90,12 +124,7 @@ export default function InterviewPage() {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
       // Completed last question
-      setIsSubmitting(true);
-      console.log("Interview Complete. Answers:", updatedAnswers);
-      // Redirect to report page (placeholder for now)
-      setTimeout(() => {
-        router.push("/"); // Or /report if it exists
-      }, 1500);
+      handleComplete(updatedAnswers);
     }
   };
 
