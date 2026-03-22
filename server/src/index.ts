@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import resumeRouter from './routes/resume.route';
+import questionRouter from './routes/question.route';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,6 +15,7 @@ app.get('/api/test', (req: Request, res: Response) => {
   res.json({ message: "Backend running" });
 });
 app.use('/api', resumeRouter);
+app.use('/api', questionRouter);
 
 // Start Server
 app.listen(PORT, () => {

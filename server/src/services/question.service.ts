@@ -1,0 +1,53 @@
+/**
+ * Mock interview questions for different roles.
+ */
+const MOCK_QUESTIONS: Record<string, string[]> = {
+  "Frontend Developer": [
+    "Explain React Virtual DOM.",
+    "What is the difference between useState and useEffect?",
+    "How does REST API work?",
+    "What is MongoDB indexing?",
+    "Explain JavaScript event loop."
+  ],
+  "Backend Developer": [
+    "Explain the difference between SQL and NoSQL databases.",
+    "What are microservices and what are their benefits?",
+    "How does JWT authentication work?",
+    "Explain the concept of middleware in Express.js.",
+    "What is connection pooling and why is it important?"
+  ],
+  "Fullstack Developer": [
+    "Explain the difference between client-side and server-side rendering.",
+    "How would you handle state management in a large-scale application?",
+    "Describe the process of deploying a full-stack application.",
+    "What are the security considerations when building an API?",
+    "Explain how you would optimize the performance of a web application."
+  ],
+  "General": [
+    "Tell me about a challenging project you worked on.",
+    "How do you stay up-to-date with the latest technologies?",
+    "What is your favorite programming language and why?",
+    "Describe a time when you had to work in a team to solve a problem.",
+    "What are your strengths and weaknesses as a developer?"
+  ]
+};
+
+/**
+ * Service to generate interview questions based on resume text and role.
+ * For now, this returns mock questions based on the role.
+ * 
+ * @param resumeText - The text extracted from the user's resume.
+ * @param role - The target role for the interview (optional).
+ * @returns An array of interview questions.
+ */
+export const generateQuestionsService = async (resumeText: string, role?: string): Promise<string[]> => {
+  // In the future, this will involve AI integration using resumeText.
+  // For now, we return mock questions.
+
+  if (role && MOCK_QUESTIONS[role]) {
+    return MOCK_QUESTIONS[role];
+  }
+
+  // Default to general questions if no role or role not recognized.
+  return MOCK_QUESTIONS["General"];
+};

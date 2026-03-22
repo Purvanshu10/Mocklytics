@@ -35,11 +35,11 @@ export default function UploadPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload resume. Please try again.");
+        throw new Error("Upload failed. Please ensure the file is a valid PDF resume and try again.");
       }
 
       const data = await response.json();
-      
+
       // Store the extracted text for the interview page
       if (typeof window !== "undefined") {
         sessionStorage.setItem("resumeText", data.resumeText || "");
@@ -49,7 +49,7 @@ export default function UploadPage() {
       setTimeout(() => {
         router.push("/interview");
       }, 500);
-      
+
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
     } finally {
@@ -61,7 +61,7 @@ export default function UploadPage() {
     <div className="min-h-screen flex flex-col bg-background text-foreground relative selection:bg-primary/30">
       {/* Global Background Grid Pattern */}
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none -z-20" />
-      
+
       {/* Subtle Gradient Orbs */}
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
@@ -79,7 +79,7 @@ export default function UploadPage() {
             <div className="inline-flex items-center justify-center p-3 mb-6 rounded-2xl bg-primary/10 border border-primary/20 backdrop-blur-sm">
               <BrainCircuit className="w-8 h-8 text-primary shadow-glow" />
             </div>
-            
+
             <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 mb-4 tracking-tight">
               Upload Your Resume
             </h1>
@@ -98,7 +98,7 @@ export default function UploadPage() {
               <Sparkles className="w-5 h-5 text-primary opacity-20 group-hover/card:opacity-100 transition-opacity duration-700" />
             </div>
 
-            <FileUpload 
+            <FileUpload
               onFileSelect={(f) => {
                 setFile(f);
                 setError(null);
@@ -114,8 +114,8 @@ export default function UploadPage() {
                 size="lg"
                 className={cn(
                   "w-full max-w-xs h-14 rounded-xl text-lg font-semibold transition-all duration-300 relative overflow-hidden group/btn",
-                  file && !isUploading 
-                    ? "bg-primary text-primary-foreground shadow-[0_0_20px_rgba(0,194,255,0.4)] hover:shadow-[0_0_30px_rgba(0,194,255,0.6)] hover:scale-[1.02]" 
+                  file && !isUploading
+                    ? "bg-primary text-primary-foreground shadow-[0_0_20px_rgba(0,194,255,0.4)] hover:shadow-[0_0_30px_rgba(0,194,255,0.6)] hover:scale-[1.02]"
                     : "bg-white/5 text-white/30 cursor-not-allowed border border-white/10"
                 )}
               >
