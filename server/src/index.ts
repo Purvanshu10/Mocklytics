@@ -1,3 +1,7 @@
+import dotenv from "dotenv";
+dotenv.config();
+import "./config/env";
+
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import resumeRouter from './routes/resume.route';

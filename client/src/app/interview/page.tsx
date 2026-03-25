@@ -17,6 +17,12 @@ interface Answer {
   answer: string;
 }
 
+interface ResumeInsights {
+  skills: string[];
+  suggestedRoles: string[];
+  domains: string[];
+}
+
 export default function InterviewPage() {
   const router = useRouter();
   
@@ -29,50 +35,90 @@ export default function InterviewPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [suggestedRoles, setSuggestedRoles] = useState<string[]>([]);
+  const [domains, setDomains] = useState<string[]>([]);
+  const [selectedRole, setSelectedRole] = useState<string>("");
+  const [isFetchingNewQuestions, setIsFetchingNewQuestions] = useState<boolean>(false);
 
-  // Constants
-  const role = "Frontend Developer";
+  const loadInsights = () => {
+    if (typeof window === "undefined") return null;
+    const storedText = sessionStorage.getItem("resumeText");
+    if (!storedText) {
+      router.push("/upload");
+      return null;
+    }
+    
+    // Parse insights with fallbacks
+    let storedSkills: string[] = [];
+    let storedRoles: string[] = ["Software Developer"];
+    let storedDomains: string[] = [];
+    
+    try {
+      const parsedSkills = JSON.parse(sessionStorage.getItem("skills") || "[]");
+      if (Array.isArray(parsedSkills) && parsedSkills.length > 0) storedSkills = parsedSkills;
+      
+      const parsedRoles = JSON.parse(sessionStorage.getItem("suggestedRoles") || "[]");
+      if (Array.isArray(parsedRoles) && parsedRoles.length > 0) storedRoles = parsedRoles;
+      
+      const parsedDomains = JSON.parse(sessionStorage.getItem("domains") || "[]");
+      if (Array.isArray(parsedDomains) && parsedDomains.length > 0) storedDomains = parsedDomains;
+    } catch {
+      // Ignore parse errors, use fallbacks
+    }
+
+    setResumeText(storedText);
+    setSkills(storedSkills);
+    setSuggestedRoles(storedRoles);
+    setDomains(storedDomains);
+    
+    return { storedText, storedRoles };
+  };
+
+  const fetchQuestions = async (text: string, targetRole: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/generate-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeText: text, role: targetRole }),
+      });
+
+      if (!response.ok) throw new Error("Failed to generate questions");
+
+      const data: QuestionResponse = await response.json();
+      setQuestions(data.questions);
+      setCurrentQuestionIndex(0);
+      setAnswers([]);
+      setCurrentAnswer("");
+    } catch (err) {
+      console.error("Error fetching questions:", err);
+      setError("Unable to generate questions. Please try again.");
+    } finally {
+      setIsLoading(false);
+      setIsFetchingNewQuestions(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchQuestions = async () => {
-      if (typeof window === "undefined") return;
-
-      const storedText = sessionStorage.getItem("resumeText");
-      if (!storedText) {
-        router.push("/upload");
-        return;
-      }
-
-      setResumeText(storedText);
-
-      try {
-        const response = await fetch("http://localhost:5000/api/generate-questions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            resumeText: storedText,
-            role: role,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to generate questions");
-        }
-
-        const data: QuestionResponse = await response.json();
-        setQuestions(data.questions);
-        setIsLoading(false);
-      } catch (err) {
-        console.error("Error fetching questions:", err);
-        setError("Unable to generate questions. Please try again.");
-        setIsLoading(false);
-      }
+    const init = () => {
+      const insights = loadInsights();
+      if (!insights) return;
+      const initialRole = insights.storedRoles[0];
+      setSelectedRole(initialRole);
+      fetchQuestions(insights.storedText, initialRole);
     };
-
-    fetchQuestions();
+    init();
   }, [router]);
+
+  const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newRole = e.target.value;
+    setSelectedRole(newRole);
+    if (resumeText) {
+      setIsFetchingNewQuestions(true);
+      fetchQuestions(resumeText, newRole);
+    }
+  };
 
   const handleComplete = async (allAnswers: Answer[]) => {
     setIsSubmitting(true);
@@ -157,6 +203,62 @@ export default function InterviewPage() {
               transition={{ delay: 0.2 }}
               className="lg:col-span-2 space-y-6"
             >
+              {/* Resume Insights Card */}
+              {skills.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="glass rounded-3xl p-6 border border-white/10 relative overflow-hidden group"
+                >
+                  <div className="absolute top-0 right-0 p-4 pointer-events-none">
+                    <BrainCircuit className="w-16 h-16 text-primary opacity-5 transform group-hover:scale-110 transition-transform duration-700" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-4">Resume Insights</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <div>
+                      <span className="text-xs text-white/40 uppercase tracking-wider font-semibold block mb-2">Detected Skills</span>
+                      <div className="flex flex-wrap gap-2">
+                        {skills.map((skill, i) => (
+                          <span key={i} className="px-2 py-1 bg-white/5 border border-white/10 rounded-md text-xs text-white/80">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-xs text-white/40 uppercase tracking-wider font-semibold block mb-2">Domains</span>
+                      <div className="flex flex-wrap gap-2">
+                        {domains.length > 0 ? domains.map((domain, i) => (
+                          <span key={i} className="px-2 py-1 bg-primary/10 border border-primary/20 text-primary rounded-md text-xs">
+                            {domain}
+                          </span>
+                        )) : <span className="text-sm text-white/30 italic">No specific domains detected</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-white/10 mt-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <span className="text-xs text-white/40 uppercase tracking-wider font-semibold block mb-1">Target Role</span>
+                      <p className="text-sm text-white/80">Tailoring interview for this role</p>
+                    </div>
+                    <select
+                      value={selectedRole}
+                      onChange={handleRoleChange}
+                      disabled={isLoading || isFetchingNewQuestions}
+                      className="bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all appearance-none cursor-pointer min-w-[200px]"
+                      style={{ backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')", backgroundRepeat: 'no-repeat', backgroundPosition: 'right .7rem top 50%', backgroundSize: '.65rem auto' }}
+                    >
+                      {!suggestedRoles.includes(selectedRole) && <option value={selectedRole}>{selectedRole}</option>}
+                      {[...new Set([...suggestedRoles, "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer"])].map((roleOpt, i) => (
+                        <option key={i} value={roleOpt}>{roleOpt}</option>
+                      ))}
+                    </select>
+                  </div>
+                </motion.div>
+              )}
+
               <AnimatePresence mode="wait">
                 {isLoading ? (
                   <motion.div
@@ -227,6 +329,13 @@ export default function InterviewPage() {
                         {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}% Complete
                       </span>
                     </div>
+
+                    {currentQuestionIndex === 0 && (
+                      <div className="mb-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-200/80 text-sm flex gap-3 items-start">
+                        <Sparkles className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                        <p>This interview is tailored for a <strong className="text-white">{selectedRole}</strong> role based on your resume.</p>
+                      </div>
+                    )}
                     
                     <h2 className="text-2xl font-bold text-white mb-8 leading-tight">
                       {questions[currentQuestionIndex]}

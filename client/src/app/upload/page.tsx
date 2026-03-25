@@ -40,9 +40,12 @@ export default function UploadPage() {
 
       const data = await response.json();
 
-      // Store the extracted text for the interview page
+      // Store the extracted text and insights for the interview page
       if (typeof window !== "undefined") {
         sessionStorage.setItem("resumeText", data.resumeText || "");
+        sessionStorage.setItem("skills", JSON.stringify(data.skills || []));
+        sessionStorage.setItem("suggestedRoles", JSON.stringify(data.suggestedRoles || []));
+        sessionStorage.setItem("domains", JSON.stringify(data.domains || []));
       }
 
       // Briefly wait to show success animation before redirecting

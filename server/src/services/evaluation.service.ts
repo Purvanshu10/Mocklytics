@@ -1,3 +1,7 @@
+import Groq from 'groq-sdk';
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
+
 /**
  * Interface for the answer evaluation response.
  */
@@ -22,31 +26,53 @@ export const evaluateAnswerService = async (
   answer: string,
   resumeText: string
 ): Promise<EvaluationResponse> => {
-  // In the future, this will involve AI integration (OpenAI/Gemini/Groq).
-  // For now, we use dummy logic based on answer length.
+  try {
+    const prompt = `You are an expert technical interviewer.
 
-  const length = answer.trim().length;
+Evaluate this candidate answer.
 
-  if (length < 40) {
-    return {
-      score: 4,
-      strengths: ["Concise response"],
-      weaknesses: ["Insufficient technical depth", "Lacks specific examples"],
-      improvements: ["Provide more detailed explanations", "Include real-world examples from your experience"]
-    };
-  } else if (length >= 40 && length <= 120) {
-    return {
-      score: 6,
-      strengths: ["Clear explanation of concept", "Used correct terminology"],
-      weaknesses: ["Missing real-world example", "Could be more comprehensive"],
-      improvements: ["Explain with a practical use-case", "Elaborate more on the underlying mechanics"]
-    };
-  } else {
-    return {
-      score: 8,
-      strengths: ["Detailed explanation", "Comprehensive coverage of the topic", "Shows good understanding"],
-      weaknesses: ["Could be more structured", "May contain redundant information"],
-      improvements: ["Organize your answer into logical steps", "Focus on the most impactful points first"]
-    };
+Candidate Resume:
+${resumeText}
+
+Interview Question:
+${question}
+
+Candidate Answer:
+${answer}
+
+Return ONLY JSON:
+
+{
+  "score": number,
+  "strengths": [],
+  "weaknesses": [],
+  "improvements": []
+}
+`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'llama3-70b-8192',
+      temperature: 0.1,
+    });
+
+    const responseContent = chatCompletion.choices[0]?.message?.content || '{}';
+    const cleanText = responseContent.replace(/```json/i, '').replace(/```/g, '').trim();
+    
+    const parsed: EvaluationResponse = JSON.parse(cleanText);
+
+    if (parsed && typeof parsed.score === 'number') {
+      return parsed;
+    }
+  } catch (error) {
+    console.error('Groq API Error:', error);
   }
+
+  // Fallback behavior on error or parsing failure
+  return {
+    score: 5,
+    strengths: ["Attempted to answer the question"],
+    weaknesses: ["Unable to provide detailed technical evaluation at this time"],
+    improvements: ["Try to elaborate more on technical details and examples"]
+  };
 };

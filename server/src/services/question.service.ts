@@ -1,5 +1,13 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+export interface QuestionResponse {
+  questions: string[];
+}
+
 /**
- * Mock interview questions for different roles.
+ * Mock interview questions for different roles (Fallback).
  */
 const MOCK_QUESTIONS: Record<string, string[]> = {
   "Frontend Developer": [
@@ -41,9 +49,46 @@ const MOCK_QUESTIONS: Record<string, string[]> = {
  * @returns An array of interview questions.
  */
 export const generateQuestionsService = async (resumeText: string, role?: string): Promise<string[]> => {
-  // In the future, this will involve AI integration using resumeText.
-  // For now, we return mock questions.
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const prompt = `You are a technical interviewer.
 
+Generate 5 personalized interview questions based on the candidate's resume.
+
+Candidate Resume:
+${resumeText}
+
+Target Role:
+${role || 'General'}
+
+Return ONLY JSON:
+
+{
+  "questions": [
+    "question 1",
+    "question 2",
+    "question 3",
+    "question 4",
+    "question 5"
+  ]
+}
+`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    
+    // Safely parse JSON from the response
+    const cleanText = text.replace(/```json/i, '').replace(/```/g, '').trim();
+    const parsed: QuestionResponse = JSON.parse(cleanText);
+
+    if (parsed && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+      return parsed.questions;
+    }
+  } catch (error) {
+    console.error('Gemini API Error:', error);
+  }
+
+  // Fallback behavior
   if (role && MOCK_QUESTIONS[role]) {
     return MOCK_QUESTIONS[role];
   }
