@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk';
+import { env } from '../config/env';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
+const groq = new Groq({ apiKey: env.GROQ_API_KEY || '' });
 
 /**
  * Interface for the answer evaluation response.
@@ -52,13 +53,13 @@ Return ONLY JSON:
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'llama3-70b-8192',
+      model: 'llama-3.3-70b-versatile',
       temperature: 0.1,
     });
 
     const responseContent = chatCompletion.choices[0]?.message?.content || '{}';
     const cleanText = responseContent.replace(/```json/i, '').replace(/```/g, '').trim();
-    
+
     const parsed: EvaluationResponse = JSON.parse(cleanText);
 
     if (parsed && typeof parsed.score === 'number') {

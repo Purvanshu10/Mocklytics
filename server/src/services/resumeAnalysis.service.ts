@@ -1,6 +1,7 @@
 import { HfInference } from '@huggingface/inference';
+import { env } from '../config/env';
 
-const hf = new HfInference(process.env.HUGGINGFACE_API_KEY || '');
+const hf = new HfInference(env.HUGGINGFACE_API_KEY || '');
 
 export interface ResumeAnalysisResponse {
   skills: string[];

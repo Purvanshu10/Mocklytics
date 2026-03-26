@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { env } from '../config/env';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY || '');
 
 export interface QuestionResponse {
   questions: string[];
@@ -50,7 +51,7 @@ const MOCK_QUESTIONS: Record<string, string[]> = {
  */
 export const generateQuestionsService = async (resumeText: string, role?: string): Promise<string[]> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const prompt = `You are a technical interviewer.
 
 Generate 5 personalized interview questions based on the candidate's resume.
@@ -76,7 +77,7 @@ Return ONLY JSON:
 
     const result = await model.generateContent(prompt);
     const text = result.response.text();
-    
+
     // Safely parse JSON from the response
     const cleanText = text.replace(/```json/i, '').replace(/```/g, '').trim();
     const parsed: QuestionResponse = JSON.parse(cleanText);

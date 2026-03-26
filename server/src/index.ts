@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config();
-import "./config/env";
+import { env } from "./config/env";
 
 import express, { Request, Response } from 'express';
 import cors from 'cors';
@@ -9,7 +7,7 @@ import questionRouter from './routes/question.route';
 import evaluationRouter from './routes/evaluation.route';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = env.PORT;
 
 // Middleware
 app.use(cors());
