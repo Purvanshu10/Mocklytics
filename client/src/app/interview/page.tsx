@@ -25,12 +25,17 @@ interface ResumeInsights {
 
 export default function InterviewPage() {
   const router = useRouter();
-  
+
+  const MAX_DURATION = 10 * 60 * 1000;
+  const MAX_QUESTIONS = 10;
+
   // State
+  const [questionCount, setQuestionCount] = useState(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState(600);
+
   const [resumeText, setResumeText] = useState<string>("");
-  const [questions, setQuestions] = useState<string[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [currentQuestion, setCurrentQuestion] = useState<string | null>(null);
   const [currentAnswer, setCurrentAnswer] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,19 +53,19 @@ export default function InterviewPage() {
       router.push("/upload");
       return null;
     }
-    
+
     // Parse insights with fallbacks
     let storedSkills: string[] = [];
     let storedRoles: string[] = ["Software Developer"];
     let storedDomains: string[] = [];
-    
+
     try {
       const parsedSkills = JSON.parse(sessionStorage.getItem("skills") || "[]");
       if (Array.isArray(parsedSkills) && parsedSkills.length > 0) storedSkills = parsedSkills;
-      
+
       const parsedRoles = JSON.parse(sessionStorage.getItem("suggestedRoles") || "[]");
       if (Array.isArray(parsedRoles) && parsedRoles.length > 0) storedRoles = parsedRoles;
-      
+
       const parsedDomains = JSON.parse(sessionStorage.getItem("domains") || "[]");
       if (Array.isArray(parsedDomains) && parsedDomains.length > 0) storedDomains = parsedDomains;
     } catch {
@@ -71,11 +76,11 @@ export default function InterviewPage() {
     setSkills(storedSkills);
     setSuggestedRoles(storedRoles);
     setDomains(storedDomains);
-    
+
     return { storedText, storedRoles };
   };
 
-  const fetchQuestions = async (text: string, targetRole: string) => {
+  const fetchQuestion = async (text: string, targetRole: string) => {
     setIsLoading(true);
     try {
       const response = await fetch("http://localhost:5000/api/generate-questions", {
@@ -84,16 +89,16 @@ export default function InterviewPage() {
         body: JSON.stringify({ resumeText: text, role: targetRole }),
       });
 
-      if (!response.ok) throw new Error("Failed to generate questions");
+      if (!response.ok) throw new Error("Failed to generate question");
 
       const data: QuestionResponse = await response.json();
-      setQuestions(data.questions);
-      setCurrentQuestionIndex(0);
-      setAnswers([]);
+      setCurrentQuestion(data.questions[0]);
       setCurrentAnswer("");
+      // Only set startTime once when the first question loads
+      setStartTime(prev => prev || Date.now());
     } catch (err) {
-      console.error("Error fetching questions:", err);
-      setError("Unable to generate questions. Please try again.");
+      console.error("Error fetching question:", err);
+      setError("Unable to generate question. Please try again.");
     } finally {
       setIsLoading(false);
       setIsFetchingNewQuestions(false);
@@ -106,78 +111,88 @@ export default function InterviewPage() {
       if (!insights) return;
       const initialRole = insights.storedRoles[0];
       setSelectedRole(initialRole);
-      fetchQuestions(insights.storedText, initialRole);
+      fetchQuestion(insights.storedText, initialRole);
     };
     init();
   }, [router]);
+
+  useEffect(() => {
+    if (!startTime) return;
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 600 - Math.floor(elapsed / 1000));
+      setTimeRemaining(remaining);
+
+      if (remaining === 0) {
+        endInterview();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  function endInterview() {
+    router.push("/report");
+  }
 
   const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRole = e.target.value;
     setSelectedRole(newRole);
     if (resumeText) {
       setIsFetchingNewQuestions(true);
-      fetchQuestions(resumeText, newRole);
+      fetchQuestion(resumeText, newRole);
     }
   };
 
-  const handleComplete = async (allAnswers: Answer[]) => {
+  const handleNext = async () => {
+    if (!currentAnswer.trim() || !currentQuestion) return;
+
     setIsSubmitting(true);
     try {
-      const evaluations = await Promise.all(
-        allAnswers.map(async (item) => {
-          const response = await fetch("http://localhost:5000/api/evaluate-answer", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              question: item.question,
-              answer: item.answer,
-              resumeText: resumeText,
-            }),
-          });
+      // 1. Evaluate answer
+      const response = await fetch("http://localhost:5000/api/evaluate-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: currentQuestion,
+          answer: currentAnswer,
+          resumeText: resumeText,
+        }),
+      });
 
-          if (!response.ok) {
-            throw new Error("Failed to evaluate answer");
-          }
+      if (!response.ok) throw new Error("Failed to evaluate answer");
 
-          return response.json();
-        })
-      );
+      const evaluation = await response.json();
 
-      sessionStorage.setItem("evaluations", JSON.stringify(evaluations));
-      router.push("/report");
+      // Store evaluation in sessionStorage
+      const existingEvals = JSON.parse(sessionStorage.getItem("evaluations") || "[]");
+      existingEvals.push(evaluation);
+      sessionStorage.setItem("evaluations", JSON.stringify(existingEvals));
+
+      // 2. Increment question count
+      const newCount = questionCount + 1;
+      setQuestionCount(newCount);
+
+      // 3. Stop if limit reached
+      if (newCount >= MAX_QUESTIONS) {
+        endInterview();
+      } else {
+        // 4. Generate next question dynamically
+        fetchQuestion(resumeText, selectedRole);
+      }
     } catch (err) {
-      console.error("Error generating report:", err);
-      setError("Unable to generate your report. Please try again.");
+      console.error("Error evaluating answer:", err);
+      setError("Failed to submit answer. Please try again.");
+    } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleNext = () => {
-    if (!currentAnswer.trim()) return;
-
-    const newAnswer: Answer = {
-      question: questions[currentQuestionIndex],
-      answer: currentAnswer,
-    };
-
-    const updatedAnswers = [...answers, newAnswer];
-    setAnswers(updatedAnswers);
-    setCurrentAnswer("");
-
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      // Completed last question
-      handleComplete(updatedAnswers);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground relative">
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none -z-20" />
-      
+
       <Navbar />
 
       <main className="flex-1 pt-32 pb-16 px-4">
@@ -192,12 +207,12 @@ export default function InterviewPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">Mock Interview</h1>
-              <p className="text-white/50 text-sm">Dashboard / {isLoading ? "Preparing" : `Question ${currentQuestionIndex + 1} of ${questions.length}`}</p>
+              <p className="text-white/50 text-sm">Dashboard / {isLoading ? "Preparing" : `Question ${questionCount + 1} of 10`}</p>
             </div>
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
@@ -214,7 +229,7 @@ export default function InterviewPage() {
                     <BrainCircuit className="w-16 h-16 text-primary opacity-5 transform group-hover:scale-110 transition-transform duration-700" />
                   </div>
                   <h3 className="text-xl font-bold text-white mb-4">Resume Insights</h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                     <div>
                       <span className="text-xs text-white/40 uppercase tracking-wider font-semibold block mb-2">Detected Skills</span>
@@ -276,7 +291,7 @@ export default function InterviewPage() {
                       Our AI is preparing interview questions based on your experience. This will take just a few moments.
                     </p>
                     <div className="w-full max-w-xs h-2 bg-white/5 rounded-full overflow-hidden">
-                      <motion.div 
+                      <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: "60%" }}
                         transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
@@ -296,7 +311,7 @@ export default function InterviewPage() {
                     </div>
                     <h2 className="text-2xl font-bold text-white mb-2">Something went wrong</h2>
                     <p className="text-white/50 max-w-sm mb-8">{error}</p>
-                    <button 
+                    <button
                       onClick={() => window.location.reload()}
                       className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
                     >
@@ -311,8 +326,8 @@ export default function InterviewPage() {
                     className="glass rounded-3xl p-8 border border-white/10 min-h-[400px] flex flex-col items-center justify-center text-center"
                   >
                     <Loader2 className="w-12 h-12 text-primary animate-spin mb-6" />
-                    <h2 className="text-2xl font-bold text-white mb-2">Interview Complete!</h2>
-                    <p className="text-white/50 max-w-sm">Generating your performance report...</p>
+                    <h2 className="text-2xl font-bold text-white mb-2">Processing...</h2>
+                    <p className="text-white/50 max-w-sm">Evaluating your answer and preparing next question...</p>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -323,22 +338,27 @@ export default function InterviewPage() {
                   >
                     <div className="flex justify-between items-center mb-6">
                       <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider">
-                        Question {currentQuestionIndex + 1}
+                        Question {questionCount + 1} / 10
                       </span>
-                      <span className="text-white/30 text-xs">
-                        {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}% Complete
-                      </span>
+                      <div className="flex items-center gap-4">
+                        <div className="text-white font-mono text-sm">
+                          Time Remaining: {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, "0")}
+                        </div>
+                        <span className="text-white/30 text-xs">
+                          {Math.round(((questionCount + 1) / MAX_QUESTIONS) * 100)}% Complete
+                        </span>
+                      </div>
                     </div>
 
-                    {currentQuestionIndex === 0 && (
+                    {questionCount === 0 && (
                       <div className="mb-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-200/80 text-sm flex gap-3 items-start">
                         <Sparkles className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                         <p>This interview is tailored for a <strong className="text-white">{selectedRole}</strong> role based on your resume.</p>
                       </div>
                     )}
-                    
+
                     <h2 className="text-2xl font-bold text-white mb-8 leading-tight">
-                      {questions[currentQuestionIndex]}
+                      {currentQuestion}
                     </h2>
 
                     <div className="flex-1">
@@ -354,13 +374,12 @@ export default function InterviewPage() {
                       <button
                         onClick={handleNext}
                         disabled={!currentAnswer.trim()}
-                        className={`group relative flex items-center gap-2 px-8 py-4 rounded-2xl font-bold transition-all duration-300 ${
-                          currentAnswer.trim()
+                        className={`group relative flex items-center gap-2 px-8 py-4 rounded-2xl font-bold transition-all duration-300 ${currentAnswer.trim()
                             ? "bg-primary text-secondary hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)] active:scale-95"
                             : "bg-white/5 text-white/20 cursor-not-allowed"
-                        }`}
+                          }`}
                       >
-                        {currentQuestionIndex < questions.length - 1 ? "Next Question" : "Finish Interview"}
+                        {questionCount + 1 < MAX_QUESTIONS ? "Next Question" : "Finish Interview"}
                         <ChevronRight className={`w-5 h-5 transition-transform duration-300 ${currentAnswer.trim() ? "group-hover:translate-x-1" : ""}`} />
                       </button>
                     </div>
@@ -400,21 +419,19 @@ export default function InterviewPage() {
                     "Soft Skills Evaluation",
                     "Role-specific Logic"
                   ].map((step, i) => {
-                    const isCompleted = isLoading ? false : currentQuestionIndex >= i + 1;
-                    const isActive = isLoading ? false : currentQuestionIndex === i;
-                    
+                    const isCompleted = isLoading ? false : questionCount >= i + 1;
+                    const isActive = isLoading ? false : questionCount === i;
+
                     return (
                       <div key={i} className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] transition-colors ${
-                          isCompleted ? "bg-primary border-primary text-secondary" : 
-                          isActive ? "border-primary text-primary animate-pulse" : 
-                          "border-white/10 text-white/30"
-                        }`}>
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] transition-colors ${isCompleted ? "bg-primary border-primary text-secondary" :
+                            isActive ? "border-primary text-primary animate-pulse" :
+                              "border-white/10 text-white/30"
+                          }`}>
                           {isCompleted ? "✓" : i + 1}
                         </div>
-                        <span className={`text-sm transition-colors ${
-                          isCompleted || isActive ? "text-white" : "text-white/30"
-                        }`}>{step}</span>
+                        <span className={`text-sm transition-colors ${isCompleted || isActive ? "text-white" : "text-white/30"
+                          }`}>{step}</span>
                       </div>
                     );
                   })}
