@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ResumePreview } from "@/components/ResumePreview";
-import { BrainCircuit, MessageSquare, ShieldCheck, Sparkles, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import { BrainCircuit, MessageSquare, ShieldCheck, Sparkles, ChevronRight, Loader2, AlertCircle, Mic, MicOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 
 interface QuestionResponse {
   questions: string[];
@@ -54,6 +54,10 @@ export default function InterviewPage() {
   const [isFetchingNewQuestions, setIsFetchingNewQuestions] = useState<boolean>(false);
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [recording, setRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -229,6 +233,113 @@ export default function InterviewPage() {
     }
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await handleTranscription(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setRecording(true);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      setError("Microphone access denied or not available");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+    }
+  };
+
+  const handleTranscription = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+
+      const response = await fetch("http://localhost:5000/api/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Transcription failed");
+
+      const data = await response.json();
+      const transcript = data.text;
+
+      if (transcript && transcript.trim()) {
+        setCurrentAnswer(transcript);
+        // Automatically trigger evaluation for voice input
+        await handleVoiceSubmit(transcript);
+      }
+    } catch (err) {
+      console.error("Transcription error:", err);
+      setError("Failed to transcribe audio. Please try typing your answer.");
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const handleVoiceSubmit = async (transcript: string) => {
+    if (!currentQuestion) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/evaluate-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: currentQuestion,
+          answer: transcript,
+          resumeText: resumeText,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to evaluate answer");
+
+      const evaluation = await response.json();
+      const existingEvals = JSON.parse(sessionStorage.getItem("evaluations") || "[]");
+      existingEvals.push(evaluation);
+      sessionStorage.setItem("evaluations", JSON.stringify(existingEvals));
+
+      const nextIndex = questionCount + 1;
+      setHistory(prev => [...prev, { role: "user", text: transcript }]);
+
+      if (nextIndex >= MAX_QUESTIONS || nextIndex >= questions.length) {
+        endInterview();
+      } else {
+        const nextQContent = questions[nextIndex];
+        setTimeout(() => {
+          setHistory(prev => [...prev, { role: "assistant", text: nextQContent }]);
+          setQuestionCount(nextIndex);
+          setCurrentQuestion(nextQContent);
+          setCurrentAnswer("");
+        }, 1000);
+      }
+    } catch (err) {
+      console.error("Error evaluating voice answer:", err);
+      setError("Failed to process spoken answer. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground relative">
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none -z-20" />
@@ -334,20 +445,43 @@ export default function InterviewPage() {
                     </p>
                     <button
                       onClick={handleNext}
-                      disabled={!currentAnswer.trim() || isSubmitting || isLoading}
+                      disabled={!currentAnswer.trim() || isSubmitting || isLoading || recording}
                       className={`group relative flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all duration-300 ${
-                        currentAnswer.trim() && !isSubmitting
+                        currentAnswer.trim() && !isSubmitting && !recording
                           ? "bg-primary text-secondary hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)] active:scale-95"
                           : "bg-white/5 text-white/20 cursor-not-allowed"
                       }`}
                     >
-                      {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                      {isSubmitting || isTranscribing ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                         <>
                           {questionCount + 1 < MAX_QUESTIONS ? "Send Answer" : "Finish Interview"}
                           <ChevronRight className="w-4 h-4" />
                         </>
                       )}
                     </button>
+                  </div>
+                  
+                  {/* Voice Control Floating Button */}
+                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={recording ? stopRecording : startRecording}
+                      disabled={isSubmitting || isTranscribing}
+                      className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+                        recording 
+                        ? "bg-red-500 text-white animate-pulse" 
+                        : "bg-primary text-secondary"
+                      } ${ (isSubmitting || isTranscribing) ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      {recording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                      {recording && (
+                        <span className="absolute -top-2 -right-2 flex h-4 w-4">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+                        </span>
+                      )}
+                    </motion.button>
                   </div>
                 </div>
               </motion.div>

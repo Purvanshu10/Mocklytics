@@ -5,6 +5,7 @@ import cors from 'cors';
 import resumeRouter from './routes/resume.route';
 import questionRouter from './routes/question.route';
 import evaluationRouter from './routes/evaluation.route';
+import transcriptionRouter from './routes/transcription.route';
 
 const app = express();
 const PORT = env.PORT;
@@ -20,6 +21,7 @@ app.get('/api/test', (req: Request, res: Response) => {
 app.use('/api', resumeRouter);
 app.use('/api', questionRouter);
 app.use('/api', evaluationRouter);
+app.use('/api', transcriptionRouter);
 
 // Start Server
 app.listen(PORT, () => {
