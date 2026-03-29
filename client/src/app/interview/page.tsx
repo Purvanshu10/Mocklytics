@@ -35,6 +35,7 @@ export default function InterviewPage() {
   const [timeRemaining, setTimeRemaining] = useState(600);
 
   const [resumeText, setResumeText] = useState<string>("");
+  const [questions, setQuestions] = useState<string[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<string | null>(null);
   const [currentAnswer, setCurrentAnswer] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -77,28 +78,35 @@ export default function InterviewPage() {
     setSuggestedRoles(storedRoles);
     setDomains(storedDomains);
 
-    return { storedText, storedRoles };
+    return { storedText };
   };
 
-  const fetchQuestion = async (text: string, targetRole: string) => {
+  const fetchQuestions = async (text: string) => {
     setIsLoading(true);
     try {
       const response = await fetch("http://localhost:5000/api/generate-questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeText: text, role: targetRole }),
+        body: JSON.stringify({ resumeText: text }),
       });
 
-      if (!response.ok) throw new Error("Failed to generate question");
+      if (!response.ok) throw new Error("Failed to generate questions");
 
       const data: QuestionResponse = await response.json();
-      setCurrentQuestion(data.questions[0]);
+      
+      if (data.questions && data.questions.length > 0) {
+        setQuestions(data.questions);
+        setCurrentQuestion(data.questions[0]);
+      } else {
+        throw new Error("No questions generated");
+      }
+      
       setCurrentAnswer("");
-      // Only set startTime once when the first question loads
+      // Only set startTime once when the questions load
       setStartTime(prev => prev || Date.now());
     } catch (err) {
-      console.error("Error fetching question:", err);
-      setError("Unable to generate question. Please try again.");
+      console.error("Error fetching questions:", err);
+      setError("Unable to generate questions. Please try again.");
     } finally {
       setIsLoading(false);
       setIsFetchingNewQuestions(false);
@@ -109,9 +117,7 @@ export default function InterviewPage() {
     const init = () => {
       const insights = loadInsights();
       if (!insights) return;
-      const initialRole = insights.storedRoles[0];
-      setSelectedRole(initialRole);
-      fetchQuestion(insights.storedText, initialRole);
+      fetchQuestions(insights.storedText);
     };
     init();
   }, [router]);
@@ -139,9 +145,11 @@ export default function InterviewPage() {
   const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRole = e.target.value;
     setSelectedRole(newRole);
+    // Note: With batch generation, changing role might require re-fetching all questions
+    // For now, we follow the batch structure where questions are generated once
     if (resumeText) {
       setIsFetchingNewQuestions(true);
-      fetchQuestion(resumeText, newRole);
+      fetchQuestions(resumeText);
     }
   };
 
@@ -171,15 +179,16 @@ export default function InterviewPage() {
       sessionStorage.setItem("evaluations", JSON.stringify(existingEvals));
 
       // 2. Increment question count
-      const newCount = questionCount + 1;
-      setQuestionCount(newCount);
-
-      // 3. Stop if limit reached
-      if (newCount >= MAX_QUESTIONS) {
+      const nextIndex = questionCount + 1;
+      
+      // 3. Stop if limit reached or no more questions
+      if (nextIndex >= MAX_QUESTIONS || nextIndex >= questions.length) {
         endInterview();
       } else {
-        // 4. Generate next question dynamically
-        fetchQuestion(resumeText, selectedRole);
+        // 4. Use next question from local store
+        setQuestionCount(nextIndex);
+        setCurrentQuestion(questions[nextIndex]);
+        setCurrentAnswer("");
       }
     } catch (err) {
       console.error("Error evaluating answer:", err);

@@ -1,12 +1,11 @@
 import { Request, Response } from 'express';
-import { generateQuestionsService } from '../services/question.service';
+import { generateQuestion } from '../services/question.service';
 
 /**
  * Interface for the generate questions request body.
  */
 interface GenerateQuestionsRequest {
   resumeText: string;
-  role?: string;
 }
 
 /**
@@ -16,16 +15,19 @@ interface GenerateQuestionsRequest {
  * @param res - Express Response object.
  */
 export const generateQuestionsController = async (req: Request, res: Response) => {
-  const { resumeText, role } = req.body as GenerateQuestionsRequest;
+  const { resumeText } = req.body as GenerateQuestionsRequest;
+
+  // Debug logging
+  console.log("Resume received length:", resumeText?.length);
 
   // Validate resumeText exists
-  if (!resumeText) {
-    return res.status(400).json({ error: "Resume text is required" });
+  if (!resumeText || resumeText.length === 0) {
+    return res.status(400).json({ error: "resumeText missing in request body" });
   }
 
   try {
-    // Call service layer to get questions
-    const questions = await generateQuestionsService(resumeText, role);
+    // Call service layer to get 10 questions at once
+    const questions = await generateQuestion({ resumeText });
 
     // Return structured JSON response
     return res.json({ questions });
