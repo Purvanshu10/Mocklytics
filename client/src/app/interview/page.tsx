@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ResumePreview } from "@/components/ResumePreview";
-import { BrainCircuit, MessageSquare, ShieldCheck, Sparkles, ChevronRight, Loader2, AlertCircle, Mic, MicOff } from "lucide-react";
+import { BrainCircuit, MessageSquare, ShieldCheck, Sparkles, ChevronRight, Loader2, AlertCircle, Mic, MicOff, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useCallback } from "react";
 
@@ -59,6 +59,7 @@ export default function InterviewPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -147,6 +148,9 @@ export default function InterviewPage() {
     utterance.rate = 1;
     utterance.pitch = 1;
     utterance.lang = "en-US";
+
+    utterance.onstart = () => setIsAiSpeaking(true);
+    utterance.onend = () => setIsAiSpeaking(false);
 
     window.speechSynthesis.speak(utterance);
   };
@@ -416,229 +420,165 @@ export default function InterviewPage() {
       
       <div className="fixed inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80 pointer-events-none z-[1]" />
 
-      <Navbar />
-
-      <main className="relative flex-1 pt-32 pb-16 px-4 z-10 flex flex-col items-center">
-        <div className="w-full max-w-5xl flex flex-col h-[calc(100vh-160px)]">
-          {/* Header Status Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-2xl p-4 border border-white/10 mb-6 flex items-center justify-between shadow-2xl z-20 backdrop-blur-xl bg-black/40"
-          >
-            <div className="flex items-center gap-4">
-              <div className="p-2 rounded-lg bg-primary/20">
-                <BrainCircuit className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-white font-bold text-sm">Mock Interview Session</h2>
-                <p className="text-white/40 text-xs uppercase tracking-widest font-medium">Active Session</p>
-              </div>
+      {/* Session Header */}
+      <header className="fixed top-0 left-0 w-full z-30 backdrop-blur-md bg-black/40 border-b border-white/10 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+            <BrainCircuit className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold tracking-tight text-white/90">Mocklytics Interview Session</h1>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-[10px] font-medium text-green-500 uppercase tracking-widest leading-none">Active Session</span>
             </div>
-            <div className="flex items-center gap-8">
-              <div className="text-right">
-                <p className="text-white/40 text-xs uppercase tracking-widest font-medium mb-1">Time Remaining</p>
-                <p className="text-primary font-mono font-bold">
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 glass px-4 py-2 rounded-xl border border-white/5">
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] text-white/40 uppercase tracking-widest leading-none mb-1">Time Remaining</span>
+                <span className={`text-sm font-mono font-bold ${timeRemaining < 60 ? "text-red-500 animate-pulse" : "text-primary"}`}>
                   {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, "0")}
-                </p>
-              </div>
-              <div className="text-right border-l border-white/10 pl-8">
-                <p className="text-white/40 text-xs uppercase tracking-widest font-medium mb-1">Progress</p>
-                <p className="text-white font-bold">
-                  {questionCount + 1} <span className="text-white/30 text-xs font-normal">/ 10</span>
-                </p>
+                </span>
               </div>
             </div>
-          </motion.div>
+            <div className="flex items-center gap-3 glass px-4 py-2 rounded-xl border border-white/5">
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] text-white/40 uppercase tracking-widest leading-none mb-1">Progress</span>
+                <span className="text-sm font-mono font-bold text-white/90">
+                  {questionCount + 1} / {MAX_QUESTIONS}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="h-8 w-px bg-white/10 mx-2" />
 
-          {/* Main Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 flex-1 overflow-hidden">
-            {/* Main Chat Area */}
-            <div className="lg:col-span-3 flex flex-col gap-4 overflow-hidden h-full">
-              <div 
-                ref={chatContainerRef}
-                className="flex-1 overflow-y-auto pr-4 space-y-6 scrollbar-hide scroll-smooth"
+          <button
+            onClick={() => router.push("/")}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all duration-300 group"
+          >
+            <X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+            <span className="text-xs font-bold uppercase tracking-widest">Exit</span>
+          </button>
+        </div>
+      </header>
+
+      <main className="relative flex-1 z-10 flex flex-col items-center justify-center h-screen px-6">
+        <div className="w-full max-w-4xl flex flex-col items-center">
+          
+          <AnimatePresence mode="wait">
+            {currentQuestion && (
+              <motion.div
+                key={questionCount}
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 1.05, y: -20 }}
+                className="relative group text-center"
               >
+                <div className="max-w-3xl text-xl md:text-3xl font-medium text-white/90 backdrop-blur-xl bg-white/5 px-10 py-8 rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] leading-relaxed">
+                  {currentQuestion}
+                </div>
+                
                 <AnimatePresence>
-                  {history.map((msg, idx) => (
+                  {isAiSpeaking && (
                     <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mt-6 flex flex-col items-center gap-2"
                     >
-                      <div className={`max-w-[80%] rounded-2xl px-6 py-4 shadow-xl ${
-                        msg.role === "user" 
-                        ? "bg-primary text-secondary rounded-tr-none font-medium" 
-                        : "glass border border-white/10 text-white/90 rounded-tl-none"
-                      }`}>
-                        <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                      <div className="text-sm tracking-[0.4em] text-cyan-400 font-bold animate-pulse uppercase">
+                        AI Speaking...
                       </div>
-                    </motion.div>
-                  ))}
-                  {isSubmitting && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex justify-start"
-                    >
-                      <div className="glass border border-white/10 rounded-2xl rounded-tl-none px-6 py-4">
-                        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <motion.div
+                            key={i}
+                            animate={{ height: [8, 16, 8] }}
+                            transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                            className="w-1 bg-cyan-400/60 rounded-full"
+                          />
+                        ))}
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
-
-              {/* Input Area */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass rounded-3xl p-4 border border-white/10 shadow-2xl bg-black/40 backdrop-blur-xl"
-              >
-                <div className="flex flex-col gap-4">
-                  <textarea
-                    value={currentAnswer}
-                    onChange={(e) => setCurrentAnswer(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey && currentAnswer.trim() && !isSubmitting) {
-                        e.preventDefault();
-                        handleNext();
-                      }
-                    }}
-                    placeholder="Type your answer here..."
-                    className="w-full h-24 bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none scrollbar-hide"
-                    disabled={isSubmitting || isLoading}
-                  />
-                  <div className="flex justify-between items-center">
-                    <p className="text-[10px] text-white/30 uppercase tracking-widest pl-2">
-                       Press Enter to Send / Shift+Enter for new line
-                    </p>
-                    <button
-                      onClick={handleNext}
-                      disabled={!currentAnswer.trim() || isSubmitting || isLoading || recording}
-                      className={`group relative flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all duration-300 ${
-                        currentAnswer.trim() && !isSubmitting && !recording
-                          ? "bg-primary text-secondary hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)] active:scale-95"
-                          : "bg-white/5 text-white/20 cursor-not-allowed"
-                      }`}
-                    >
-                      {isSubmitting || isTranscribing ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                        <>
-                          {questionCount + 1 < MAX_QUESTIONS ? "Send Answer" : "Finish Interview"}
-                          <ChevronRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  
-                  {/* Voice Control Floating Button */}
-                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-4 z-20">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={recording ? stopRecording : startRecording}
-                      disabled={isSubmitting || isTranscribing}
-                      className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 z-20 ${
-                        recording 
-                        ? "bg-red-500 text-white animate-pulse" 
-                        : "bg-primary text-secondary"
-                      } ${ (isSubmitting || isTranscribing) ? "opacity-50 cursor-not-allowed" : ""}`}
-                    >
-                      {recording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-                      {recording && (
-                        <span className="absolute -top-2 -right-2 flex h-4 w-4">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
-                        </span>
-                      )}
-                    </motion.button>
-                  </div>
-                </div>
               </motion.div>
-            </div>
+            )}
+          </AnimatePresence>
 
-            {/* Sidebar */}
-            <div className="lg:col-span-1 hidden lg:flex flex-col gap-6 overflow-y-auto pr-2 scrollbar-hide">
-              {/* Resume Insights Card */}
-              {skills.length > 0 && (
-                <div className="glass rounded-2xl p-5 border border-white/10 relative overflow-hidden group">
-                   <div className="absolute -top-4 -right-4 pointer-events-none">
-                    <BrainCircuit className="w-16 h-16 text-primary opacity-5 transform group-hover:scale-110 transition-transform duration-700" />
-                  </div>
-                  <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    Resume Context
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold block mb-2">Key Skills</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {skills.slice(0, 8).map((skill, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] text-white/70">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold block mb-2">Role</span>
-                      <div className="px-3 py-2 bg-primary/10 border border-primary/20 rounded-xl">
-                        <p className="text-xs text-primary font-medium truncate">{selectedRole || suggestedRoles[0]}</p>
-                      </div>
-                    </div>
-                  </div>
+          {/* Interaction Zone */}
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center z-30">
+            <motion.button
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={recording ? stopRecording : startRecording}
+              disabled={isSubmitting || isTranscribing || isAiSpeaking}
+              className={`group relative w-20 h-20 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.4)] transition-all duration-500 ${
+                recording 
+                ? "bg-red-500 text-white animate-pulse scale-110" 
+                : isAiSpeaking
+                  ? "bg-white/10 text-white/20 cursor-not-allowed border border-white/5"
+                  : "bg-primary text-secondary hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)]"
+              } ${ (isSubmitting || isTranscribing) ? "opacity-30 cursor-not-allowed" : ""}`}
+            >
+              <AnimatePresence mode="wait">
+                {isTranscribing || isSubmitting ? (
+                  <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                  </motion.div>
+                ) : (
+                  <motion.div key="icon" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    {recording ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              {recording && (
+                <span className="absolute -inset-2 border-2 border-red-500 rounded-full animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]" />
+              )}
+            </motion.button>
+
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              key={recording ? 'listening' : 'begin'}
+              className="mt-6 text-center"
+            >
+              <div className="text-[10px] tracking-[0.5em] font-bold text-white/50 uppercase">
+                {recording ? "Listening..." : "Begin Speaking"}
+              </div>
+              {!recording && !isAiSpeaking && !isSubmitting && (
+                <div className="mt-1 text-[8px] text-white/20 uppercase tracking-widest italic">
+                  Capture your response verbally
                 </div>
               )}
-
-              <div className="glass rounded-2xl p-5 border border-white/10">
-                <h3 className="text-sm font-bold text-white mb-4">Stages</h3>
-                <div className="space-y-3">
-                  {[
-                    "Experience Review",
-                    "Technical Depth",
-                    "Problem Solving",
-                    "System Thinking"
-                  ].map((step, i) => {
-                    const stageIndex = Math.floor(questionCount / 2.5);
-                    const isCompleted = stageIndex > i;
-                    const isActive = stageIndex === i;
-
-                    return (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center text-[8px] transition-colors ${
-                          isCompleted ? "bg-primary border-primary text-secondary" :
-                          isActive ? "border-primary text-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.3)]" :
-                          "border-white/10 text-white/30"
-                        }`}>
-                          {isCompleted ? "✓" : i + 1}
-                        </div>
-                        <span className={`text-[11px] font-medium transition-colors ${
-                          isCompleted || isActive ? "text-white" : "text-white/30"
-                        }`}>{step}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-               <div className="glass rounded-2xl p-5 border border-white/10 bg-primary/5">
-                <div className="flex items-center gap-2 mb-3">
-                  <ShieldCheck className="w-4 h-4 text-primary" />
-                  <h4 className="font-bold text-white text-[10px] uppercase tracking-widest">Privacy</h4>
-                </div>
-                <p className="text-[10px] text-white/40 leading-relaxed">
-                  Session data is encrypted and deleted after report generation.
-                </p>
-              </div>
-            </div>
+            </motion.div>
           </div>
+
+          <AnimatePresence>
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-red-500/20 text-red-400 border border-red-500/30 px-6 py-3 rounded-full backdrop-blur-xl text-sm flex items-center gap-3 shadow-2xl"
+              >
+                <AlertCircle className="w-4 h-4" />
+                <span>{error}</span>
+                <button 
+                  onClick={() => setError(null)}
+                  className="ml-2 hover:text-white"
+                >✕</button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </main>
-
       <Footer />
     </div>
   );
