@@ -58,6 +58,7 @@ export default function InterviewPage() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -151,6 +152,33 @@ export default function InterviewPage() {
   };
 
   useEffect(() => {
+    let stream: MediaStream | null = null;
+    
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (err) {
+        console.error("Error starting camera:", err);
+      }
+    }
+
+    startCamera();
+
+    // Cleanup function to stop camera when navigating away
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const init = () => {
       const insights = loadInsights();
       if (!insights) return;
@@ -179,6 +207,12 @@ export default function InterviewPage() {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
+    // Stop camera tracks
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+    }
+    
     router.push("/report");
   }
 
@@ -367,18 +401,27 @@ export default function InterviewPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground relative">
-      <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none -z-20" />
+    <div className="min-h-screen flex flex-col bg-background text-foreground relative overflow-hidden">
+      {/* Immersive Video Background */}
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className="fixed top-0 left-0 w-full h-full object-cover z-0 grayscale-[0.2] brightness-50"
+      />
+      
+      <div className="fixed inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80 pointer-events-none z-[1]" />
 
       <Navbar />
 
-      <main className="flex-1 pt-32 pb-16 px-4">
-        <div className="max-w-5xl mx-auto flex flex-col h-[calc(100vh-160px)]">
+      <main className="relative flex-1 pt-32 pb-16 px-4 z-10 flex flex-col items-center">
+        <div className="w-full max-w-5xl flex flex-col h-[calc(100vh-160px)]">
           {/* Header Status Bar */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-2xl p-4 border border-white/10 mb-6 flex items-center justify-between shadow-2xl"
+            className="glass rounded-2xl p-4 border border-white/10 mb-6 flex items-center justify-between shadow-2xl z-20 backdrop-blur-xl bg-black/40"
           >
             <div className="flex items-center gap-4">
               <div className="p-2 rounded-lg bg-primary/20">
@@ -488,13 +531,13 @@ export default function InterviewPage() {
                   </div>
                   
                   {/* Voice Control Floating Button */}
-                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-4 z-20">
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={recording ? stopRecording : startRecording}
                       disabled={isSubmitting || isTranscribing}
-                      className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+                      className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 z-20 ${
                         recording 
                         ? "bg-red-500 text-white animate-pulse" 
                         : "bg-primary text-secondary"
