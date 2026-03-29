@@ -7,6 +7,7 @@ import { Footer } from "@/components/Footer";
 import { ResumePreview } from "@/components/ResumePreview";
 import { BrainCircuit, MessageSquare, ShieldCheck, Sparkles, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRef } from "react";
 
 interface QuestionResponse {
   questions: string[];
@@ -21,6 +22,11 @@ interface ResumeInsights {
   skills: string[];
   suggestedRoles: string[];
   domains: string[];
+}
+
+interface ChatMessage {
+  role: "assistant" | "user";
+  text: string;
 }
 
 export default function InterviewPage() {
@@ -46,6 +52,15 @@ export default function InterviewPage() {
   const [domains, setDomains] = useState<string[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [isFetchingNewQuestions, setIsFetchingNewQuestions] = useState<boolean>(false);
+  const [history, setHistory] = useState<ChatMessage[]>([]);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [history]);
 
   const loadInsights = () => {
     if (typeof window === "undefined") return null;
@@ -97,6 +112,7 @@ export default function InterviewPage() {
       if (data.questions && data.questions.length > 0) {
         setQuestions(data.questions);
         setCurrentQuestion(data.questions[0]);
+        setHistory([{ role: "assistant", text: data.questions[0] }]);
       } else {
         throw new Error("No questions generated");
       }
@@ -180,15 +196,30 @@ export default function InterviewPage() {
 
       // 2. Increment question count
       const nextIndex = questionCount + 1;
+
+      // Update history with user answer
+      setHistory(prev => [
+        ...prev,
+        { role: "user", text: currentAnswer }
+      ]);
       
       // 3. Stop if limit reached or no more questions
       if (nextIndex >= MAX_QUESTIONS || nextIndex >= questions.length) {
         endInterview();
       } else {
         // 4. Use next question from local store
-        setQuestionCount(nextIndex);
-        setCurrentQuestion(questions[nextIndex]);
-        setCurrentAnswer("");
+        const nextQContent = questions[nextIndex];
+        
+        // Brief delay before showing next question for UX
+        setTimeout(() => {
+          setHistory(prev => [
+            ...prev,
+            { role: "assistant", text: nextQContent }
+          ]);
+          setQuestionCount(nextIndex);
+          setCurrentQuestion(nextQContent);
+          setCurrentAnswer("");
+        }, 1000);
       }
     } catch (err) {
       console.error("Error evaluating answer:", err);
@@ -205,258 +236,199 @@ export default function InterviewPage() {
       <Navbar />
 
       <main className="flex-1 pt-32 pb-16 px-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto flex flex-col h-[calc(100vh-160px)]">
+          {/* Header Status Bar */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-4 mb-8"
+            className="glass rounded-2xl p-4 border border-white/10 mb-6 flex items-center justify-between shadow-2xl"
           >
-            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
-              <Sparkles className="w-6 h-6 text-primary" />
+            <div className="flex items-center gap-4">
+              <div className="p-2 rounded-lg bg-primary/20">
+                <BrainCircuit className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-white font-bold text-sm">Mock Interview Session</h2>
+                <p className="text-white/40 text-xs uppercase tracking-widest font-medium">Active Session</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Mock Interview</h1>
-              <p className="text-white/50 text-sm">Dashboard / {isLoading ? "Preparing" : `Question ${questionCount + 1} of 10`}</p>
+            <div className="flex items-center gap-8">
+              <div className="text-right">
+                <p className="text-white/40 text-xs uppercase tracking-widest font-medium mb-1">Time Remaining</p>
+                <p className="text-primary font-mono font-bold">
+                  {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, "0")}
+                </p>
+              </div>
+              <div className="text-right border-l border-white/10 pl-8">
+                <p className="text-white/40 text-xs uppercase tracking-widest font-medium mb-1">Progress</p>
+                <p className="text-white font-bold">
+                  {questionCount + 1} <span className="text-white/30 text-xs font-normal">/ 10</span>
+                </p>
+              </div>
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="lg:col-span-2 space-y-6"
-            >
+          {/* Main Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 flex-1 overflow-hidden">
+            {/* Main Chat Area */}
+            <div className="lg:col-span-3 flex flex-col gap-4 overflow-hidden h-full">
+              <div 
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto pr-4 space-y-6 scrollbar-hide scroll-smooth"
+              >
+                <AnimatePresence>
+                  {history.map((msg, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div className={`max-w-[80%] rounded-2xl px-6 py-4 shadow-xl ${
+                        msg.role === "user" 
+                        ? "bg-primary text-secondary rounded-tr-none font-medium" 
+                        : "glass border border-white/10 text-white/90 rounded-tl-none"
+                      }`}>
+                        <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                  {isSubmitting && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex justify-start"
+                    >
+                      <div className="glass border border-white/10 rounded-2xl rounded-tl-none px-6 py-4">
+                        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Input Area */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass rounded-3xl p-4 border border-white/10 shadow-2xl bg-black/40 backdrop-blur-xl"
+              >
+                <div className="flex flex-col gap-4">
+                  <textarea
+                    value={currentAnswer}
+                    onChange={(e) => setCurrentAnswer(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey && currentAnswer.trim() && !isSubmitting) {
+                        e.preventDefault();
+                        handleNext();
+                      }
+                    }}
+                    placeholder="Type your answer here..."
+                    className="w-full h-24 bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none scrollbar-hide"
+                    disabled={isSubmitting || isLoading}
+                  />
+                  <div className="flex justify-between items-center">
+                    <p className="text-[10px] text-white/30 uppercase tracking-widest pl-2">
+                       Press Enter to Send / Shift+Enter for new line
+                    </p>
+                    <button
+                      onClick={handleNext}
+                      disabled={!currentAnswer.trim() || isSubmitting || isLoading}
+                      className={`group relative flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all duration-300 ${
+                        currentAnswer.trim() && !isSubmitting
+                          ? "bg-primary text-secondary hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)] active:scale-95"
+                          : "bg-white/5 text-white/20 cursor-not-allowed"
+                      }`}
+                    >
+                      {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                        <>
+                          {questionCount + 1 < MAX_QUESTIONS ? "Send Answer" : "Finish Interview"}
+                          <ChevronRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="lg:col-span-1 hidden lg:flex flex-col gap-6 overflow-y-auto pr-2 scrollbar-hide">
               {/* Resume Insights Card */}
               {skills.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="glass rounded-3xl p-6 border border-white/10 relative overflow-hidden group"
-                >
-                  <div className="absolute top-0 right-0 p-4 pointer-events-none">
+                <div className="glass rounded-2xl p-5 border border-white/10 relative overflow-hidden group">
+                   <div className="absolute -top-4 -right-4 pointer-events-none">
                     <BrainCircuit className="w-16 h-16 text-primary opacity-5 transform group-hover:scale-110 transition-transform duration-700" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-4">Resume Insights</h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                  <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    Resume Context
+                  </h3>
+                  
+                  <div className="space-y-4">
                     <div>
-                      <span className="text-xs text-white/40 uppercase tracking-wider font-semibold block mb-2">Detected Skills</span>
-                      <div className="flex flex-wrap gap-2">
-                        {skills.map((skill, i) => (
-                          <span key={i} className="px-2 py-1 bg-white/5 border border-white/10 rounded-md text-xs text-white/80">
+                      <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold block mb-2">Key Skills</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {skills.slice(0, 8).map((skill, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] text-white/70">
                             {skill}
                           </span>
                         ))}
                       </div>
                     </div>
+                    
                     <div>
-                      <span className="text-xs text-white/40 uppercase tracking-wider font-semibold block mb-2">Domains</span>
-                      <div className="flex flex-wrap gap-2">
-                        {domains.length > 0 ? domains.map((domain, i) => (
-                          <span key={i} className="px-2 py-1 bg-primary/10 border border-primary/20 text-primary rounded-md text-xs">
-                            {domain}
-                          </span>
-                        )) : <span className="text-sm text-white/30 italic">No specific domains detected</span>}
+                      <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold block mb-2">Role</span>
+                      <div className="px-3 py-2 bg-primary/10 border border-primary/20 rounded-xl">
+                        <p className="text-xs text-primary font-medium truncate">{selectedRole || suggestedRoles[0]}</p>
                       </div>
                     </div>
                   </div>
-
-                  <div className="pt-4 border-t border-white/10 mt-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <span className="text-xs text-white/40 uppercase tracking-wider font-semibold block mb-1">Target Role</span>
-                      <p className="text-sm text-white/80">Tailoring interview for this role</p>
-                    </div>
-                    <select
-                      value={selectedRole}
-                      onChange={handleRoleChange}
-                      disabled={isLoading || isFetchingNewQuestions}
-                      className="bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all appearance-none cursor-pointer min-w-[200px]"
-                      style={{ backgroundImage: "url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')", backgroundRepeat: 'no-repeat', backgroundPosition: 'right .7rem top 50%', backgroundSize: '.65rem auto' }}
-                    >
-                      {!suggestedRoles.includes(selectedRole) && <option value={selectedRole}>{selectedRole}</option>}
-                      {[...new Set([...suggestedRoles, "Frontend Developer", "Backend Developer", "Full Stack Developer", "Software Engineer"])].map((roleOpt, i) => (
-                        <option key={i} value={roleOpt}>{roleOpt}</option>
-                      ))}
-                    </select>
-                  </div>
-                </motion.div>
+                </div>
               )}
 
-              <AnimatePresence mode="wait">
-                {isLoading ? (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="glass rounded-3xl p-8 border border-white/10 min-h-[400px] flex flex-col items-center justify-center text-center"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-6 animate-pulse">
-                      <BrainCircuit className="w-8 h-8 text-primary shadow-glow" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Analyzing Your Resume</h2>
-                    <p className="text-white/50 max-w-sm mb-8">
-                      Our AI is preparing interview questions based on your experience. This will take just a few moments.
-                    </p>
-                    <div className="w-full max-w-xs h-2 bg-white/5 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: "60%" }}
-                        transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
-                        className="h-full bg-primary shadow-glow"
-                      />
-                    </div>
-                  </motion.div>
-                ) : error ? (
-                  <motion.div
-                    key="error"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="glass rounded-3xl p-8 border border-red-500/20 min-h-[400px] flex flex-col items-center justify-center text-center"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6 text-red-500">
-                      <AlertCircle className="w-8 h-8" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Something went wrong</h2>
-                    <p className="text-white/50 max-w-sm mb-8">{error}</p>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
-                    >
-                      Try Again
-                    </button>
-                  </motion.div>
-                ) : isSubmitting ? (
-                  <motion.div
-                    key="submitting"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="glass rounded-3xl p-8 border border-white/10 min-h-[400px] flex flex-col items-center justify-center text-center"
-                  >
-                    <Loader2 className="w-12 h-12 text-primary animate-spin mb-6" />
-                    <h2 className="text-2xl font-bold text-white mb-2">Processing...</h2>
-                    <p className="text-white/50 max-w-sm">Evaluating your answer and preparing next question...</p>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="question"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="glass rounded-3xl p-8 border border-white/10 min-h-[400px] flex flex-col"
-                  >
-                    <div className="flex justify-between items-center mb-6">
-                      <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider">
-                        Question {questionCount + 1} / 10
-                      </span>
-                      <div className="flex items-center gap-4">
-                        <div className="text-white font-mono text-sm">
-                          Time Remaining: {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, "0")}
-                        </div>
-                        <span className="text-white/30 text-xs">
-                          {Math.round(((questionCount + 1) / MAX_QUESTIONS) * 100)}% Complete
-                        </span>
-                      </div>
-                    </div>
-
-                    {questionCount === 0 && (
-                      <div className="mb-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-200/80 text-sm flex gap-3 items-start">
-                        <Sparkles className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                        <p>This interview is tailored for a <strong className="text-white">{selectedRole}</strong> role based on your resume.</p>
-                      </div>
-                    )}
-
-                    <h2 className="text-2xl font-bold text-white mb-8 leading-tight">
-                      {currentQuestion}
-                    </h2>
-
-                    <div className="flex-1">
-                      <textarea
-                        value={currentAnswer}
-                        onChange={(e) => setCurrentAnswer(e.target.value)}
-                        placeholder="Type your answer here..."
-                        className="w-full h-48 bg-white/[0.03] border border-white/10 rounded-2xl p-6 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
-                      />
-                    </div>
-
-                    <div className="mt-8 flex justify-end">
-                      <button
-                        onClick={handleNext}
-                        disabled={!currentAnswer.trim()}
-                        className={`group relative flex items-center gap-2 px-8 py-4 rounded-2xl font-bold transition-all duration-300 ${currentAnswer.trim()
-                            ? "bg-primary text-secondary hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)] active:scale-95"
-                            : "bg-white/5 text-white/20 cursor-not-allowed"
-                          }`}
-                      >
-                        {questionCount + 1 < MAX_QUESTIONS ? "Next Question" : "Finish Interview"}
-                        <ChevronRight className={`w-5 h-5 transition-transform duration-300 ${currentAnswer.trim() ? "group-hover:translate-x-1" : ""}`} />
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <div className="glass rounded-3xl p-8 border border-white/10">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-primary" />
-                  Extracted Summary
-                </h3>
-                <div className="bg-transparent rounded-2xl">
-                  {resumeText ? (
-                    <ResumePreview resumeText={resumeText} />
-                  ) : (
-                    <div className="bg-white/[0.03] rounded-2xl p-6 border border-white/5 min-h-[100px]">
-                      <p className="text-white/30 italic text-sm">No resume text found. Have you uploaded your resume yet?</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="space-y-6"
-            >
-              <div className="glass rounded-3xl p-6 border border-white/10">
-                <h3 className="text-white font-semibold mb-4">Interview Setup</h3>
-                <div className="space-y-4">
+              <div className="glass rounded-2xl p-5 border border-white/10">
+                <h3 className="text-sm font-bold text-white mb-4">Stages</h3>
+                <div className="space-y-3">
                   {[
                     "Experience Review",
-                    "Technical Skills Analysis",
-                    "Soft Skills Evaluation",
-                    "Role-specific Logic"
+                    "Technical Depth",
+                    "Problem Solving",
+                    "System Thinking"
                   ].map((step, i) => {
-                    const isCompleted = isLoading ? false : questionCount >= i + 1;
-                    const isActive = isLoading ? false : questionCount === i;
+                    const stageIndex = Math.floor(questionCount / 2.5);
+                    const isCompleted = stageIndex > i;
+                    const isActive = stageIndex === i;
 
                     return (
                       <div key={i} className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] transition-colors ${isCompleted ? "bg-primary border-primary text-secondary" :
-                            isActive ? "border-primary text-primary animate-pulse" :
-                              "border-white/10 text-white/30"
-                          }`}>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center text-[8px] transition-colors ${
+                          isCompleted ? "bg-primary border-primary text-secondary" :
+                          isActive ? "border-primary text-primary shadow-[0_0_10px_rgba(var(--primary-rgb),0.3)]" :
+                          "border-white/10 text-white/30"
+                        }`}>
                           {isCompleted ? "✓" : i + 1}
                         </div>
-                        <span className={`text-sm transition-colors ${isCompleted || isActive ? "text-white" : "text-white/30"
-                          }`}>{step}</span>
+                        <span className={`text-[11px] font-medium transition-colors ${
+                          isCompleted || isActive ? "text-white" : "text-white/30"
+                        }`}>{step}</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="glass rounded-3xl p-6 border border-white/10 bg-primary/5">
-                <div className="flex items-center gap-3 mb-3">
-                  <ShieldCheck className="w-5 h-5 text-primary" />
-                  <h4 className="font-semibold text-white text-sm">Privacy Guaranteed</h4>
+               <div className="glass rounded-2xl p-5 border border-white/10 bg-primary/5">
+                <div className="flex items-center gap-2 mb-3">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  <h4 className="font-bold text-white text-[10px] uppercase tracking-widest">Privacy</h4>
                 </div>
-                <p className="text-xs text-white/40 leading-relaxed">
-                  Your resume data is processed securely and is only used to generate your interview experience.
+                <p className="text-[10px] text-white/40 leading-relaxed">
+                  Session data is encrypted and deleted after report generation.
                 </p>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </main>
