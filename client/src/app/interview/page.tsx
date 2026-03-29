@@ -170,10 +170,13 @@ export default function InterviewPage() {
 
     startCamera();
 
-    // Cleanup function to stop camera when navigating away
+    // Cleanup function to stop camera and audio when navigating away
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
     };
   }, []);
