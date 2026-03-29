@@ -117,6 +117,9 @@ export default function InterviewPage() {
         setQuestions(data.questions);
         setCurrentQuestion(data.questions[0]);
         setHistory([{ role: "assistant", text: data.questions[0] }]);
+        
+        // Speak first question
+        speakQuestion(data.questions[0]);
       } else {
         throw new Error("No questions generated");
       }
@@ -131,6 +134,20 @@ export default function InterviewPage() {
       setIsLoading(false);
       setIsFetchingNewQuestions(false);
     }
+  };
+
+  const speakQuestion = (text: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.lang = "en-US";
+
+    window.speechSynthesis.speak(utterance);
   };
 
   useEffect(() => {
@@ -159,6 +176,9 @@ export default function InterviewPage() {
   }, [startTime]);
 
   function endInterview() {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     router.push("/report");
   }
 
@@ -223,6 +243,9 @@ export default function InterviewPage() {
           setQuestionCount(nextIndex);
           setCurrentQuestion(nextQContent);
           setCurrentAnswer("");
+          
+          // Speak next question
+          speakQuestion(nextQContent);
         }, 1000);
       }
     } catch (err) {
@@ -330,6 +353,9 @@ export default function InterviewPage() {
           setQuestionCount(nextIndex);
           setCurrentQuestion(nextQContent);
           setCurrentAnswer("");
+          
+          // Speak next question
+          speakQuestion(nextQContent);
         }, 1000);
       }
     } catch (err) {
