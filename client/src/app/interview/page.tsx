@@ -54,6 +54,7 @@ export default function InterviewPage() {
   const [isFetchingNewQuestions, setIsFetchingNewQuestions] = useState<boolean>(false);
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const [recording, setRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -63,10 +64,10 @@ export default function InterviewPage() {
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
-  }, [history]);
+  }, [history, isAiSpeaking]);
 
   const loadInsights = () => {
     if (typeof window === "undefined") return null;
@@ -422,6 +423,7 @@ export default function InterviewPage() {
 
       {/* Session Header */}
       <header className="fixed top-0 left-0 w-full z-30 backdrop-blur-md bg-black/40 border-b border-white/10 px-6 py-4 flex items-center justify-between">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/60 to-transparent h-24 pointer-events-none" />
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
             <BrainCircuit className="w-5 h-5 text-primary" />
@@ -467,117 +469,129 @@ export default function InterviewPage() {
         </div>
       </header>
 
-      <main className="relative flex-1 z-10 flex flex-col items-center justify-center h-screen px-6">
-        <div className="w-full max-w-4xl flex flex-col items-center">
-          
-          <AnimatePresence mode="wait">
-            {currentQuestion && (
-              <motion.div
-                key={questionCount}
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 1.05, y: -20 }}
-                className="relative group text-center"
-              >
-                <div className="max-w-3xl text-xl md:text-3xl font-medium text-white/90 backdrop-blur-xl bg-white/5 px-10 py-8 rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] leading-relaxed">
-                  {currentQuestion}
-                </div>
-                
-                <AnimatePresence>
-                  {isAiSpeaking && (
+      <main className="relative flex-1 z-10 h-screen flex flex-col pt-36 pb-40 overflow-hidden">
+        {/* Chat Overlay Container - Rebuilt for maximum visibility and transcript flow */}
+        <div className="flex-1 overflow-y-auto px-6 scrollbar-hide flex justify-center w-full">
+          <div 
+            ref={chatContainerRef}
+            className="max-w-7xl w-full flex flex-col gap-8 pb-12 pt-4 min-h-full"
+          >
+            {/* Spacer to push content to bottom when few messages exist */}
+            <div className="flex-1" />
+            <AnimatePresence initial={false}>
+              {history.map((msg, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 30, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className={`flex flex-col w-full ${msg.role === "assistant" ? "items-start" : "items-end"}`}
+                >
+                  <div 
+                    className={`max-w-[80%] px-8 py-5 rounded-[2rem] shadow-2xl backdrop-blur-2xl border font-medium leading-relaxed
+                      ${msg.role === "assistant" 
+                        ? "bg-white/10 border-white/20 text-white self-start text-base md:text-lg lg:text-xl" 
+                        : "bg-cyan-500/20 border-cyan-400/30 text-white self-end text-base md:text-lg"
+                      }`}
+                  >
+                    {msg.text}
+                  </div>
+                  
+                  {/* AI Speaking Indicator specifically under the last assistant message */}
+                  {msg.role === "assistant" && idx === history.findLastIndex(m => m.role === "assistant") && isAiSpeaking && (
                     <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="mt-6 flex flex-col items-center gap-2"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="mt-4 ml-4 flex flex-col items-start gap-2"
                     >
-                      <div className="text-sm tracking-[0.4em] text-cyan-400 font-bold animate-pulse uppercase">
+                      <div className="text-[11px] tracking-[0.3em] font-black text-cyan-400 animate-pulse uppercase">
                         AI Speaking...
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1.5 items-end h-4">
                         {[1, 2, 3, 4, 5].map((i) => (
                           <motion.div
                             key={i}
-                            animate={{ height: [8, 16, 8] }}
-                            transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
-                            className="w-1 bg-cyan-400/60 rounded-full"
+                            animate={{ height: [4, 16, 4] }}
+                            transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.1, ease: "easeInOut" }}
+                            className="w-1 bg-cyan-400/50 rounded-full"
                           />
                         ))}
                       </div>
                     </motion.div>
                   )}
-                </AnimatePresence>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Interaction Zone */}
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center z-30">
-            <motion.button
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={recording ? stopRecording : startRecording}
-              disabled={isSubmitting || isTranscribing || isAiSpeaking}
-              className={`group relative w-20 h-20 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.4)] transition-all duration-500 ${
-                recording 
-                ? "bg-red-500 text-white animate-pulse scale-110" 
-                : isAiSpeaking
-                  ? "bg-white/10 text-white/20 cursor-not-allowed border border-white/5"
-                  : "bg-primary text-secondary hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)]"
-              } ${ (isSubmitting || isTranscribing) ? "opacity-30 cursor-not-allowed" : ""}`}
-            >
-              <AnimatePresence mode="wait">
-                {isTranscribing || isSubmitting ? (
-                  <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <Loader2 className="w-8 h-8 animate-spin" />
-                  </motion.div>
-                ) : (
-                  <motion.div key="icon" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    {recording ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              {recording && (
-                <span className="absolute -inset-2 border-2 border-red-500 rounded-full animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]" />
-              )}
-            </motion.button>
-
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              key={recording ? 'listening' : 'begin'}
-              className="mt-6 text-center"
-            >
-              <div className="text-[10px] tracking-[0.5em] font-bold text-white/50 uppercase">
-                {recording ? "Listening..." : "Begin Speaking"}
-              </div>
-              {!recording && !isAiSpeaking && !isSubmitting && (
-                <div className="mt-1 text-[8px] text-white/20 uppercase tracking-widest italic">
-                  Capture your response verbally
-                </div>
-              )}
-            </motion.div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            <div ref={bottomRef} className="h-4" />
           </div>
-
-          <AnimatePresence>
-            {error && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-red-500/20 text-red-400 border border-red-500/30 px-6 py-3 rounded-full backdrop-blur-xl text-sm flex items-center gap-3 shadow-2xl"
-              >
-                <AlertCircle className="w-4 h-4" />
-                <span>{error}</span>
-                <button 
-                  onClick={() => setError(null)}
-                  className="ml-2 hover:text-white"
-                >✕</button>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
+
+        {/* Interaction Zone - Fixed near bottom */}
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center z-20">
+          <motion.button
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={recording ? stopRecording : startRecording}
+            disabled={isSubmitting || isTranscribing || isAiSpeaking}
+            className={`group relative w-20 h-20 rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(0,0,0,0.6)] transition-all duration-500 ${
+              recording 
+              ? "bg-red-500 text-white animate-pulse scale-110" 
+              : isAiSpeaking
+                ? "bg-white/10 text-white/20 cursor-not-allowed border border-white/5"
+                : "bg-primary text-secondary hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)]"
+            } ${ (isSubmitting || isTranscribing) ? "opacity-30 cursor-not-allowed" : ""}`}
+          >
+            <AnimatePresence mode="wait">
+              {isTranscribing || isSubmitting ? (
+                <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                </motion.div>
+              ) : (
+                <motion.div key="icon" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  {recording ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {recording && (
+              <span className="absolute -inset-3 border-4 border-red-500/30 rounded-full animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]" />
+            )}
+          </motion.button>
+
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            key={recording ? 'listening' : 'begin'}
+            className="mt-6 text-center"
+          >
+            <div className="text-[10px] tracking-[0.6em] font-black text-white/40 uppercase">
+              {recording ? "LISTENING..." : "BEGIN SPEAKING"}
+            </div>
+            {!recording && !isAiSpeaking && !isSubmitting && (
+              <div className="mt-2 text-[9px] text-white/20 uppercase tracking-[0.2em] font-medium animate-pulse">
+                Click to provide your response
+              </div>
+            )}
+          </motion.div>
+        </div>
+
+        <AnimatePresence>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-red-500/20 text-red-400 border border-red-500/30 px-6 py-3 rounded-full backdrop-blur-xl text-sm flex items-center gap-3 shadow-2xl"
+            >
+              <AlertCircle className="w-4 h-4" />
+              <span>{error}</span>
+              <button 
+                onClick={() => setError(null)}
+                className="ml-2 hover:text-white"
+              >✕</button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
       <Footer />
     </div>
