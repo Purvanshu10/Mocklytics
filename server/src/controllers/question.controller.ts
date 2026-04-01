@@ -17,9 +17,6 @@ interface GenerateQuestionsRequest {
 export const generateQuestionsController = async (req: Request, res: Response) => {
   const { resumeText } = req.body as GenerateQuestionsRequest;
 
-  // Debug logging
-  console.log("Resume received length:", resumeText?.length);
-
   // Validate resumeText exists
   if (!resumeText || resumeText.length === 0) {
     return res.status(400).json({ error: "resumeText missing in request body" });

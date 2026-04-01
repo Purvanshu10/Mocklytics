@@ -1,7 +1,7 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { env } from '../config/env';
 
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY || '');
+const groq = new Groq({ apiKey: env.GROQ_API_KEY || '' });
 
 /**
  * Service to generate exactly 10 structured interview questions in one request.
@@ -39,7 +39,7 @@ STRICT RULES:
 ${retryCount > 0 ? "7. REGENERATION ATTEMPT: Your previous attempt was too generic or failed validation. Be extra specific now." : ""}
 
 QUESTION STRUCTURE:
-Q1: Introductory question asking candidate to introduce themselves and describe technical strengths.
+Q1: Greeting candidate by his name and then Introductory question asking candidate to introduce themselves and describe technical strengths.
 Q2–Q4: Questions about implementation details of specific projects or internships listed in the resume.
 Q5–Q6: Questions testing internal workings of technologies or skills mentioned in the resume.
 Q7–Q8: Questions about optimization, scaling, or architecture tradeoffs for their projects.
@@ -57,29 +57,38 @@ Return ONLY JSON:
 `;
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: getPrompt(0) }],
+      model: 'llama-3.1-8b-instant',
+      temperature: 0.4,
+      // @ts-ignore - response_format may not be in older SDK types but usually works on Groq
+      response_format: { type: "json_object" }
+    });
 
-    let result = await model.generateContent(getPrompt(0));
-    let text = result.response.text();
-    let cleanText = text.replace(/```json/i, '').replace(/```/g, '').trim();
-    let parsed: { questions: string[] } = JSON.parse(cleanText);
+    const responseContent = chatCompletion.choices[0]?.message?.content || '{}';
+    let parsed: { questions: string[] } = JSON.parse(responseContent);
 
     // Initial validation
     if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length !== 10) {
-      console.warn("Gemini returned invalid questions. Retrying with stricter instructions...");
-      result = await model.generateContent(getPrompt(1));
-      text = result.response.text();
-      cleanText = text.replace(/```json/i, '').replace(/```/g, '').trim();
-      parsed = JSON.parse(cleanText);
+      console.warn("Groq returned invalid questions. Retrying with stricter instructions...");
+      const retryCompletion = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: getPrompt(1) }],
+        model: 'llama-3.1-8b-instant',
+        temperature: 0.3,
+        // @ts-ignore
+        response_format: { type: "json_object" }
+      });
+      const retryContent = retryCompletion.choices[0]?.message?.content || '{}';
+      parsed = JSON.parse(retryContent);
     }
 
     if (parsed && Array.isArray(parsed.questions) && parsed.questions.length === 10) {
       return parsed.questions;
     } else {
-      throw new Error("Invalid question generation output from Gemini after retry");
+      throw new Error("Invalid question generation output from Groq after retry");
     }
   } catch (error) {
-    console.error('Gemini API Error:', error);
+    console.error('Groq API Error:', error);
   }
 
   // Fallback behavior: provide a generic set of 10 questions

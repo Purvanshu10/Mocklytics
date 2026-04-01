@@ -60,7 +60,10 @@ export default function InterviewPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const videoStreamRef = useRef<MediaStream | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const recordingStartTimeRef = useRef<number | null>(null);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -157,14 +160,13 @@ export default function InterviewPage() {
   };
 
   useEffect(() => {
-    let stream: MediaStream | null = null;
-    
     async function startCamera() {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: false
         });
+        videoStreamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -175,10 +177,11 @@ export default function InterviewPage() {
 
     startCamera();
 
-    // Cleanup function to stop camera and audio when navigating away
+    // Cleanup function to stop only the video stream
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (videoStreamRef.current) {
+        videoStreamRef.current.getTracks().forEach(track => track.stop());
+        videoStreamRef.current = null;
       }
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
@@ -216,9 +219,14 @@ export default function InterviewPage() {
       window.speechSynthesis.cancel();
     }
     // Stop camera tracks
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+    if (videoStreamRef.current) {
+      videoStreamRef.current.getTracks().forEach(track => track.stop());
+      videoStreamRef.current = null;
+    }
+    // Stop audio tracks
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => track.stop());
+      audioStreamRef.current = null;
     }
     
     router.push("/report");
@@ -300,10 +308,21 @@ export default function InterviewPage() {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      audioStreamRef.current = stream;
+      
+      // Explicitly check if stream is active and not muted
+      const audioTrack = stream.getAudioTracks()[0];
+      if (!audioTrack || !audioTrack.enabled || audioTrack.readyState !== "live") {
+        throw new Error("Microphone stream is not active");
+      }
+
+      const options = { mimeType: 'audio/webm' };
+      const mediaRecorder = new MediaRecorder(stream, options);
+      
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      recordingStartTimeRef.current = Date.now();
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -313,8 +332,21 @@ export default function InterviewPage() {
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        
+        if (audioBlob.size < 500) {
+          console.warn("Recording too short, ignoring transcription.");
+          setError("Please speak a bit longer for a better response.");
+          setIsTranscribing(false);
+          return;
+        }
+
         await handleTranscription(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
+        
+        // Stop ONLY the audio tracks
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach(track => track.stop());
+          audioStreamRef.current = null;
+        }
       };
 
       mediaRecorder.start();
@@ -327,8 +359,20 @@ export default function InterviewPage() {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && recording) {
-      mediaRecorderRef.current.stop();
-      setRecording(false);
+      const duration = Date.now() - (recordingStartTimeRef.current || 0);
+      
+      // Ensure minimum 500ms recording
+      if (duration < 500) {
+        setTimeout(() => {
+          if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+            setRecording(false);
+          }
+        }, 500 - duration);
+      } else {
+        mediaRecorderRef.current.stop();
+        setRecording(false);
+      }
     }
   };
 

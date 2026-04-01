@@ -6,7 +6,7 @@ export default function TestApiConnector() {
     fetch('http://localhost:5000/api/test')
       .then(res => res.json())
       .then(data => {
-        console.log('Backend /api/test response:', data);
+        // Log removed for cleaner console
       })
       .catch(err => {
         console.error('Error connecting to backend:', err);

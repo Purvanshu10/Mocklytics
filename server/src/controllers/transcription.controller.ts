@@ -38,6 +38,18 @@ export const transcribeController = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No audio file provided' });
     }
 
+    // Reject files that are too small (likely empty or silent)
+    if (req.file.size < 500) {
+      console.warn(`Rejecting small audio file: ${req.file.size} bytes`);
+      
+      // Clean up the invalid file
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      
+      return res.status(400).json({ error: 'Audio file is too small or empty. Please speak longer.' });
+    }
+
     try {
       const filePath = req.file.path;
       const transcript = await transcribeAudio(filePath);
