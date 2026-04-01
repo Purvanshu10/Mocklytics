@@ -1,0 +1,30 @@
+<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mocklytics-neon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#00F0FF" />
+      <stop offset="100%" stopColor="#0057FF" />
+    </linearGradient>
+    <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <rect width="120" height="120" rx="20" fill="#0A0A0A" />
+
+  <g filter="url(#neon-glow)">
+    <path d="M25,95 V45 A15,15 0 0,1 55,45 L60,60 L65,45 A15,15 0 0,1 95,45 V95" stroke="url(#mocklytics-neon)" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M10,65 Q20,85 30,65 T50,55 T70,75 T95,60 T110,60" stroke="url(#mocklytics-neon)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    
+    <circle cx="43" cy="62" r="4.5" fill="#0A0A0A" stroke="url(#mocklytics-neon)" strokeWidth="2.5" />
+    <circle cx="68" cy="71" r="4.5" fill="#0A0A0A" stroke="url(#mocklytics-neon)" strokeWidth="2.5" />
+    <circle cx="43" cy="62" r="2" fill="url(#mocklytics-neon)" />
+    <circle cx="68" cy="71" r="2" fill="url(#mocklytics-neon)" />
+    
+    <rect x="35" y="75" width="4" height="15" rx="2" fill="url(#mocklytics-neon)" />
+    <rect x="42" y="80" width="3" height="8" rx="1.5" fill="url(#mocklytics-neon)" />
+    
+    <rect x="98" y="55" width="5" height="18" rx="2.5" fill="url(#mocklytics-neon)" />
+    <rect x="106" y="60" width="3" height="10" rx="1.5" fill="url(#mocklytics-neon)" />
+  </g>
+</svg>

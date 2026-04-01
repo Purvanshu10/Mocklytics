@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export function Navbar() {
   return (
@@ -8,7 +8,7 @@ export function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
           <div className="bg-primary/20 p-2 rounded-lg group-hover:bg-primary/30 transition-colors">
-            <BrainCircuit className="w-6 h-6 text-primary" />
+            <Logo className="w-6 h-6" />
           </div>
           <span className="font-bold text-xl tracking-tight text-white group-hover:text-glow transition-all">
             Mocklytics
@@ -20,9 +20,6 @@ export function Navbar() {
           <Link href="#analytics" className="hover:text-primary transition-colors">Analytics</Link>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/login" className="hidden sm:block text-sm font-medium text-white/70 hover:text-white transition-colors">
-            Log In
-          </Link>
           <Link href="/upload">
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_15px_rgba(0,194,255,0.5)]">
               Start Interview

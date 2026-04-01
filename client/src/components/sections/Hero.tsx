@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ArrowRight, FileText, Sparkles, BrainCircuit } from "lucide-react";
+import { ArrowRight, FileText, Sparkles } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export function Hero() {
   return (
@@ -64,7 +65,7 @@ export function Hero() {
             
             {/* Center Core */}
             <div className="w-32 h-32 rounded-full bg-background border border-primary/50 flex items-center justify-center shadow-[0_0_50px_rgba(0,194,255,0.5)] z-20">
-              <BrainCircuit className="w-16 h-16 text-primary animate-pulse" />
+              <Logo className="w-20 h-20 animate-pulse" />
             </div>
 
             {/* Orbiting data points */}

@@ -6,15 +6,36 @@ import { FileUpload } from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { BrainCircuit, Loader2, ArrowRight, Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
+import { Loader2, ArrowRight, Sparkles } from "lucide-react";
+import { Logo } from "@/components/Logo";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+
+const ANALYSIS_STATUSES = [
+  "Reviewing your profile…",
+  "Screening your technical background…",
+  "Evaluating your experience level…",
+  "Shortlisting focus areas for discussion…"
+];
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [statusIndex, setStatusIndex] = useState(0);
   const router = useRouter();
+
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isUploading) {
+      interval = setInterval(() => {
+        setStatusIndex((prev) => (prev + 1) % ANALYSIS_STATUSES.length);
+      }, 1500);
+    } else {
+      setStatusIndex(0);
+    }
+    return () => clearInterval(interval);
+  }, [isUploading]);
 
   const handleUpload = async () => {
     if (!file) {
@@ -80,7 +101,7 @@ export default function UploadPage() {
             className="text-center mb-12"
           >
             <div className="inline-flex items-center justify-center p-3 mb-6 rounded-2xl bg-primary/10 border border-primary/20 backdrop-blur-sm">
-              <BrainCircuit className="w-8 h-8 text-primary shadow-glow" />
+              <Logo className="w-8 h-8" />
             </div>
 
             <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 mb-4 tracking-tight">
@@ -123,9 +144,22 @@ export default function UploadPage() {
                 )}
               >
                 {isUploading ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Analyzing...</span>
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    <div className="relative h-6 flex items-center overflow-hidden min-w-[300px]">
+                      <AnimatePresence mode="wait">
+                        <motion.span
+                          key={statusIndex}
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          exit={{ y: -20, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: "easeOut" }}
+                          className="absolute left-2 text-sm md:text-base whitespace-nowrap"
+                        >
+                          {ANALYSIS_STATUSES[statusIndex]}
+                        </motion.span>
+                      </AnimatePresence>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">

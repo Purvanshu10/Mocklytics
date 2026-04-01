@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { BrainCircuit, Twitter, Github, Linkedin } from "lucide-react";
+import { Twitter, Github, Linkedin } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export function Footer() {
   return (
@@ -7,7 +8,7 @@ export function Footer() {
       <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="col-span-1 md:col-span-1 border-r-0 border-r border-white/10">
           <Link href="/" className="flex items-center gap-2 mb-4">
-            <BrainCircuit className="w-6 h-6 text-primary" />
+            <Logo className="w-6 h-6" />
             <span className="font-bold text-lg text-white">Mocklytics</span>
           </Link>
           <p className="text-white/50 text-sm mb-6 max-w-xs">

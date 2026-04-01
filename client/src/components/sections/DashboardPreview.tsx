@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowUpRight, BarChart3, BrainCircuit, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowUpRight, BarChart3, CheckCircle2, AlertCircle } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export function DashboardPreview() {
   return (
@@ -52,7 +53,7 @@ export function DashboardPreview() {
             {/* Main Score Card */}
             <Card className="col-span-1 border-white/10 bg-white/5 shadow-none overflow-hidden relative">
               <div className="absolute top-0 right-0 p-4 opacity-10">
-                <BrainCircuit className="w-24 h-24" />
+                <Logo className="w-24 h-24" />
               </div>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-white/60">Overall Score</CardTitle>

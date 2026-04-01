@@ -5,13 +5,21 @@ import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ResumePreview } from "@/components/ResumePreview";
-import { BrainCircuit, MessageSquare, ShieldCheck, Sparkles, ChevronRight, Loader2, AlertCircle, Mic, MicOff, X } from "lucide-react";
+import { MessageSquare, ShieldCheck, Sparkles, ChevronRight, Loader2, AlertCircle, Mic, MicOff, X } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useCallback } from "react";
 
 interface QuestionResponse {
   questions: string[];
 }
+
+const ANALYSIS_STATUSES = [
+  "Reviewing your profile…",
+  "Screening your technical background…",
+  "Evaluating your experience level…",
+  "Shortlisting focus areas for discussion…"
+];
 
 interface Answer {
   question: string;
@@ -52,6 +60,7 @@ export default function InterviewPage() {
   const [domains, setDomains] = useState<string[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [isFetchingNewQuestions, setIsFetchingNewQuestions] = useState<boolean>(false);
+  const [statusIndex, setStatusIndex] = useState(0);
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -142,6 +151,18 @@ export default function InterviewPage() {
       setIsFetchingNewQuestions(false);
     }
   };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isLoading) {
+      interval = setInterval(() => {
+        setStatusIndex((prev) => (prev + 1) % ANALYSIS_STATUSES.length);
+      }, 1500);
+    } else {
+      setStatusIndex(0);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const speakQuestion = (text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -457,6 +478,66 @@ export default function InterviewPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground relative overflow-hidden">
+        {/* Cinematic Background */}
+        <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none -z-20" />
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 blur-[150px] rounded-full pointer-events-none -z-10" />
+
+        <div className="max-w-lg w-full px-8 text-center flex flex-col items-center">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="mb-12 relative"
+          >
+            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
+            <div className="relative w-24 h-24 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center backdrop-blur-xl">
+              <Logo className="w-14 h-14 animate-pulse" />
+            </div>
+            {/* Pulsing rings */}
+            <motion.div
+              animate={{ scale: [1, 1.5], opacity: [0.3, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+              className="absolute -inset-4 border border-primary/20 rounded-full"
+            />
+          </motion.div>
+
+          <h2 className="text-2xl font-bold mb-4 tracking-tight">Preparing Your Interview</h2>
+          
+          <div className="relative h-8 flex items-center justify-center w-full overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={statusIndex}
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -20, opacity: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="absolute flex items-center gap-3 text-white/50 text-base font-medium whitespace-nowrap"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                {ANALYSIS_STATUSES[statusIndex]}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div className="mt-12 w-full h-1 bg-white/5 rounded-full overflow-hidden relative">
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: "0%" }}
+              transition={{ duration: 8, ease: "easeInOut" }}
+              className="absolute inset-0 bg-primary shadow-[0_0_15px_rgba(0,194,255,0.8)]"
+            />
+          </div>
+          <p className="mt-4 text-[10px] text-white/20 uppercase tracking-[0.3em] font-bold">
+            Mocklytics AI Engine V3.1
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground relative overflow-hidden">
       {/* Immersive Video Background */}
@@ -475,7 +556,7 @@ export default function InterviewPage() {
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/60 to-transparent h-24 pointer-events-none" />
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-            <BrainCircuit className="w-5 h-5 text-primary" />
+            <Logo className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-sm font-bold tracking-tight text-white/90">Mocklytics Interview Session</h1>

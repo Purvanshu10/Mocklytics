@@ -11,9 +11,9 @@ import {
   BarChart3,
   ChevronUp,
   ChevronDown,
-  BrainCircuit,
   Plus
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { motion } from "framer-motion";
 
 interface Evaluation {
@@ -197,7 +197,7 @@ export default function ReportPage() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2.5 group cursor-pointer" onClick={() => router.push("/")}>
               <div className="bg-primary/20 p-2 rounded-xl group-hover:bg-primary/30 transition-all">
-                <BrainCircuit className="w-6 h-6 text-primary" />
+                <Logo className="w-6 h-6 z-10" />
               </div>
               <span className="font-black text-xl tracking-tighter text-white">Mocklytics</span>
             </div>
