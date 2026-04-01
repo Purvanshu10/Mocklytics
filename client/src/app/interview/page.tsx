@@ -64,6 +64,7 @@ export default function InterviewPage() {
   const audioStreamRef = useRef<MediaStream | null>(null);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const recordingStartTimeRef = useRef<number | null>(null);
+  const hasInitializedRef = useRef(false);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -190,13 +191,17 @@ export default function InterviewPage() {
   }, []);
 
   useEffect(() => {
+    // Guard to ensure initialization only runs once, especially in React Strict Mode
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     const init = () => {
       const insights = loadInsights();
       if (!insights) return;
       fetchQuestions(insights.storedText);
     };
     init();
-  }, [router]);
+  }, []); // Run only on mount
 
   useEffect(() => {
     if (!startTime) return;
