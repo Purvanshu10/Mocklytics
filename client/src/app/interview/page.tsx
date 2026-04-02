@@ -119,7 +119,8 @@ export default function InterviewPage() {
   const fetchQuestions = async (text: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/api/generate-questions", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${apiUrl}/api/generate-questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resumeText: text }),
@@ -275,7 +276,8 @@ export default function InterviewPage() {
     setIsSubmitting(true);
     try {
       // 1. Evaluate answer
-      const response = await fetch("http://localhost:5000/api/evaluate-answer", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${apiUrl}/api/evaluate-answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -408,7 +410,8 @@ export default function InterviewPage() {
       const formData = new FormData();
       formData.append("audio", audioBlob, "recording.webm");
 
-      const response = await fetch("http://localhost:5000/api/transcribe", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${apiUrl}/api/transcribe`, {
         method: "POST",
         body: formData,
       });
@@ -436,7 +439,8 @@ export default function InterviewPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch("http://localhost:5000/api/evaluate-answer", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${apiUrl}/api/evaluate-answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

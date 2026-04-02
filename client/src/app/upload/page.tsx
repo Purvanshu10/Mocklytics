@@ -50,7 +50,8 @@ export default function UploadPage() {
     formData.append("resume", file);
 
     try {
-      const response = await fetch("http://localhost:5000/api/upload-resume", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${apiUrl}/api/upload-resume`, {
         method: "POST",
         body: formData,
       });
