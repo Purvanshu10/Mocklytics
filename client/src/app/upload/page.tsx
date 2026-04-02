@@ -50,7 +50,7 @@ export default function UploadPage() {
     formData.append("resume", file);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://mocklytics-l170.onrender.com";
       const response = await fetch(`${apiUrl}/api/upload-resume`, {
         method: "POST",
         body: formData,

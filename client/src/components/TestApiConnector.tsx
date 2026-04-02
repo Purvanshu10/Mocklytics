@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 export default function TestApiConnector() {
   useEffect(() => {
-    fetch('http://localhost:5000/api/test')
+    fetch('https://mocklytics-l170.onrender.com/api/test')
       .then(res => res.json())
       .then(data => {
         // Log removed for cleaner console
