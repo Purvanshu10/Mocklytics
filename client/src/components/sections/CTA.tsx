@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export function CTA() {
   return (
@@ -31,9 +32,11 @@ export function CTA() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(0,194,255,0.4)] transition-all">
-                Get Started for Free <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
+              <Link href="/upload">
+                <Button size="lg" className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(0,194,255,0.4)] transition-all">
+                  Get Started for Free <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
             </div>
             <p className="text-sm text-white/40 mt-4">No credit card required. Cancel anytime.</p>
           </div>

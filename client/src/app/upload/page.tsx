@@ -90,7 +90,7 @@ export default function UploadPage() {
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
-      <Navbar />
+      <Navbar minimal />
 
       <main className="flex-1 flex flex-col items-center justify-center pt-24 pb-16 px-4">
         <div className="max-w-4xl w-full">

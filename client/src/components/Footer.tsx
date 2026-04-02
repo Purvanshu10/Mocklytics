@@ -15,13 +15,28 @@ export function Footer() {
             AI-powered mock interviews to help you land your dream job. Real-time feedback, actionable insights.
           </p>
           <div className="flex gap-4">
-            <Link href="#" className="text-white/50 hover:text-primary transition-colors">
+            <Link 
+              href="https://x.com/Purvanshu_10" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-white/50 hover:text-primary transition-all duration-300 hover:drop-shadow-[0_0_8px_rgba(0,194,255,0.8)] hover:-translate-y-0.5"
+            >
               <Twitter className="w-5 h-5" />
             </Link>
-            <Link href="#" className="text-white/50 hover:text-primary transition-colors">
+            <Link 
+              href="https://github.com/Purvanshu10" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-white/50 hover:text-primary transition-all duration-300 hover:drop-shadow-[0_0_8px_rgba(0,194,255,0.8)] hover:-translate-y-0.5"
+            >
               <Github className="w-5 h-5" />
             </Link>
-            <Link href="#" className="text-white/50 hover:text-primary transition-colors">
+            <Link 
+              href="https://www.linkedin.com/in/purvanshu-jindal-2127a32b2/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-white/50 hover:text-primary transition-all duration-300 hover:drop-shadow-[0_0_8px_rgba(0,194,255,0.8)] hover:-translate-y-0.5"
+            >
               <Linkedin className="w-5 h-5" />
             </Link>
           </div>
