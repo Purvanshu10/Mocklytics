@@ -1,3 +1,15 @@
+console.log(">>> BACKEND START LOG: Attempting to start server...");
+
+process.on('uncaughtException', (err: Error) => {
+  console.error('!!! UNCAUGHT EXCEPTION:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('!!! UNHANDLED REJECTION:', reason);
+});
+
 import { env } from "./config/env";
 
 import express, { Request, Response } from 'express';
