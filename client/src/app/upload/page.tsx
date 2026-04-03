@@ -20,6 +20,7 @@ const ANALYSIS_STATUSES = [
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
+  const [resumeUrl, setResumeUrl] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [statusIndex, setStatusIndex] = useState(0);
@@ -38,8 +39,8 @@ export default function UploadPage() {
   }, [isUploading]);
 
   const handleUpload = async () => {
-    if (!file) {
-      setError("Please select a file first.");
+    if (!file && !resumeUrl) {
+      setError("Please select a file or provide a Google Drive link.");
       return;
     }
 
@@ -47,7 +48,12 @@ export default function UploadPage() {
     setError(null);
 
     const formData = new FormData();
-    formData.append("resume", file);
+    if (file) {
+      formData.append("resume", file);
+    }
+    if (resumeUrl) {
+      formData.append("resumeUrl", resumeUrl);
+    }
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://mocklytics-l170.onrender.com";
@@ -126,20 +132,47 @@ export default function UploadPage() {
             <FileUpload
               onFileSelect={(f) => {
                 setFile(f);
+                if (f) setResumeUrl("");
                 setError(null);
               }}
               selectedFile={file}
               error={error}
             />
 
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-white/5"></span>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-[#0A0A0A] px-4 text-white/20 tracking-widest font-medium backdrop-blur-sm">OR</span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-sm font-medium text-white/40 ml-1">Paste Google Drive Link</label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  value={resumeUrl}
+                  onChange={(e) => {
+                    setResumeUrl(e.target.value);
+                    if (e.target.value) setFile(null);
+                    setError(null);
+                  }}
+                  placeholder="https://drive.google.com/file/d/.../view"
+                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all group-hover:border-white/20"
+                />
+              </div>
+            </div>
+
             <div className="mt-12 flex flex-col items-center">
               <Button
                 onClick={handleUpload}
-                disabled={!file || isUploading}
+                disabled={(!file && !resumeUrl) || isUploading}
                 size="lg"
                 className={cn(
                   "w-full max-w-xs h-14 rounded-xl text-lg font-semibold transition-all duration-300 relative overflow-hidden group/btn",
-                  file && !isUploading
+                  (file || resumeUrl) && !isUploading
                     ? "bg-primary text-primary-foreground shadow-[0_0_20px_rgba(0,194,255,0.4)] hover:shadow-[0_0_30px_rgba(0,194,255,0.6)] hover:scale-[1.02]"
                     : "bg-white/5 text-white/30 cursor-not-allowed border border-white/10"
                 )}
