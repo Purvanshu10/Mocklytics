@@ -1,43 +1,162 @@
-# Mocklytics
+Mocklytics — AI Mock Interview Platform 🎙️🤖
+Mocklytics is an AI‑powered mock interview platform that simulates real technical interviews using resume‑aware question generation, voice interaction, and structured performance evaluation.
 
-An AI-powered mock interview platform that analyzes resumes and conducts personalized interviews with real-time feedback.
+It helps students and developers practice interviews realistically and receive actionable feedback instantly.
 
-## Project Structure
+🚀 Live Demo
+🔗 https://mocklytics-client.vercel.app/
 
-This repository is built as a full-stack mono-repo:
+✨ Features
+📄 Resume‑aware interview question generation
 
-- `/client` - Next.js App Router frontend (React, Tailwind CSS v4, Framer Motion)
-- `/server` - Node.js + Express API backend (TypeScript)
+🎙️ Voice‑based answer interaction
 
-## How to Run Locally
+🧠 AI evaluation of responses
 
-### 1. Start the API Server
+📊 Structured technical performance reports
 
-Open a terminal and navigate to the server folder:
+⏱️ Real interview‑style timed sessions (10 minutes)
 
-```bash
-cd server
+📈 Strengths, weaknesses, and improvement roadmap
+
+🎯 Recruiter‑style verdict scoring
+
+🌐 Fully deployed production web app
+
+🧠 How It Works
+Mocklytics simulates a real interview workflow:
+
+Upload your resume
+
+AI analyzes skills and projects
+
+Personalized technical questions are generated
+
+Speak your answers naturally
+
+AI evaluates responses in real time
+
+Receive a structured performance report
+
+🏗️ Tech Stack
+Frontend
+React / Next.js
+
+Tailwind CSS
+
+Glassmorphism UI design
+
+Responsive layout
+
+Backend / AI Pipeline
+Groq API
+
+Whisper (speech‑to‑text)
+
+LLaMA‑3.1‑8B (evaluation + question generation)
+
+Resume parsing pipeline
+
+Session lifecycle controller
+
+Deployment
+Vercel (frontend hosting)
+
+Production‑ready API integration
+
+📊 Report Generation Includes
+Each interview session produces:
+
+Final performance rating
+
+Technical depth score
+
+Communication clarity score
+
+Problem‑solving evaluation
+
+Experience relevance analysis
+
+Key strengths
+
+Critical gaps
+
+Actionable next steps
+
+🎯 Why Mocklytics?
+Unlike traditional mock interview tools:
+
+✅ Resume‑personalized questions
+✅ Voice interaction instead of typing
+✅ AI‑generated structured feedback
+✅ Real interview timing simulation
+✅ Recruiter‑style evaluation reports
+
+Mocklytics behaves like a real AI interviewer, not just a question generator.
+
+📸 Screenshots (Recommended Section)
+You can add:
+
+Landing page
+Interview interface
+Voice interaction screen
+Final report dashboard
+Example:
+
+![Landing Page](./screenshots/landing.png)
+![Interview Screen](./screenshots/interview.png)
+![Report Dashboard](./screenshots/report.png)
+⚙️ Local Setup
+Clone the repository:
+
+git clone https://github.com/Purvanshu10/mocklytics-client.git
+cd mocklytics-client
+Install dependencies:
+
 npm install
+Run development server:
+
 npm run dev
-```
+Open:
 
-The Express API will run on `http://localhost:5000` with hot-reloading.
-Test Route: `GET http://localhost:5000/api/test` returns `{ "message": "Backend running" }`.
+http://localhost:3000
+🔐 Environment Variables
+Create a .env.local file:
 
-### 2. Start the Frontend Application
+GROQ_API_KEY=your_api_key_here
+📁 Project Structure (Example)
+/components
+/pages
+/app
+/services
+/utils
+/public
+🚧 Current Limitations
+Direct Google Drive mobile uploads depend on browser provider behavior
 
-Open a second terminal window and navigate to the client folder:
+Session history tracking not yet implemented
 
-```bash
-cd client
-npm install
-npm run dev
-```
+Authentication system not included (planned future upgrade)
 
-The React frontend will be served at `http://localhost:3000`.
+🔮 Future Improvements
+Interview history dashboard
 
-## Features
-- **Frontend Design**: Sleek, modern SaaS aesthetic entirely re-styled into an Electric Blue & Cyan scheme against a deep navy/glassmorphic background.
-- **Modular Frontend Architecture**: Reusable UI components powered by Shadcn and animated using Framer Motion.
-- **Backend Architecture**: Scalable Express server configured with strictly typed TypeScript routing, models, and controllers.
-- CORS enabled by default across both services.
+Progress tracking across sessions
+
+Role‑specific interview modes
+
+Company‑style interview simulation
+
+Leaderboard / analytics insights
+
+👨‍💻 Author
+Purvanshu Jindal
+
+GitHub: https://github.com/Purvanshu10
+
+LinkedIn: https://www.linkedin.com/in/purvanshu-jindal-2127a32b2/
+
+X (Twitter): https://x.com/Purvanshu_10
+
+⭐ If You Like This Project
+Consider starring the repo to support development!
